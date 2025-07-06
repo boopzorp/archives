@@ -72,8 +72,16 @@ export function AddLinkForm({ onSave, link }: LinkFormProps) {
       return;
     }
     
+    const parsedUrl = z.string().url().safeParse(url);
+    if (!parsedUrl.success) {
+      form.setError("url", { type: "manual", message: "Please enter a valid URL." });
+      return;
+    }
+
     setIsLoading(true);
     setImageUrl(undefined);
+    form.clearErrors("url");
+    
     const result = await getLinkMetadata(url);
     setIsLoading(false);
 
@@ -84,8 +92,9 @@ export function AddLinkForm({ onSave, link }: LinkFormProps) {
         description: result.error,
       });
     } else {
-      form.setValue("title", result.title, { shouldValidate: true });
-      form.setValue("tags", result.tags.join(', '));
+      form.setValue("title", result.title || '', { shouldValidate: true });
+      form.setValue("description", result.description || '');
+      form.setValue("tags", result.tags?.join(', ') || '');
       if (result.imageUrl) {
         setImageUrl(result.imageUrl);
       }
@@ -112,7 +121,17 @@ export function AddLinkForm({ onSave, link }: LinkFormProps) {
               <FormLabel>Link URL</FormLabel>
               <div className="flex gap-2">
                 <FormControl>
-                  <Input placeholder="https://your.link/here" {...field} disabled={isEditMode} />
+                  <Input 
+                    placeholder="https://your.link/here" 
+                    {...field} 
+                    onBlur={(e) => {
+                      field.onBlur(e);
+                      if (e.target.value && !isEditMode) {
+                        handleFetchMetadata();
+                      }
+                    }}
+                    disabled={isEditMode} 
+                  />
                 </FormControl>
                 <Button type="button" onClick={handleFetchMetadata} disabled={isLoading || isEditMode} variant="outline" className="shrink-0">
                   {isLoading ? (
@@ -120,7 +139,7 @@ export function AddLinkForm({ onSave, link }: LinkFormProps) {
                   ) : (
                     <Sparkles className="h-4 w-4" />
                   )}
-                  <span className="ml-2 hidden sm:inline">Fetch Details</span>
+                  <span className="ml-2 hidden sm:inline">Fetch</span>
                 </Button>
               </div>
               <FormMessage />
