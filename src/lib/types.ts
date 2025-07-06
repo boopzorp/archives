@@ -1,3 +1,4 @@
+
 export interface Link {
   id: string;
   url: string;
@@ -24,3 +25,10 @@ export interface Tag {
 export type GroupByOption = 'none' | 'day' | 'month' | 'year';
 
 export type SortByOption = 'newest' | 'oldest' | 'title-asc' | 'title-desc';
+
+export type SuggestTagsAndTitleOutput = {
+  title?: string;
+  description?: string;
+  tags?: string[];
+  imageUrl?: string;
+};
