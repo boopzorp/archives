@@ -12,10 +12,12 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import type { Link } from "@/lib/types";
+import { cn } from '@/lib/utils';
 
 interface LinkCardProps {
   link: Link;
   onDelete: (id: string) => void;
+  onToggleFavorite: (id: string) => void;
 }
 
 function getDomain(url: string) {
@@ -26,7 +28,7 @@ function getDomain(url: string) {
     }
 }
 
-export default function LinkCard({ link, onDelete }: LinkCardProps) {
+export default function LinkCard({ link, onDelete, onToggleFavorite }: LinkCardProps) {
   const openLink = () => {
     window.open(link.url, '_blank', 'noopener,noreferrer');
   };
@@ -56,8 +58,8 @@ export default function LinkCard({ link, onDelete }: LinkCardProps) {
             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
                 <Folder className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                <Star className="h-4 w-4" />
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => onToggleFavorite(link.id)}>
+                <Star className={cn("h-4 w-4", link.isFavorite && "fill-current text-primary")} />
             </Button>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
                 <Eye className="h-4 w-4" />

@@ -5,8 +5,10 @@ import {
 } from 'lucide-react';
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider } from '@/components/ui/sidebar';
 import { Input } from './ui/input';
+import { useAppContext } from '@/context/app-context';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
+  const { searchTerm, setSearchTerm } = useAppContext();
   return (
     <SidebarProvider>
         <Sidebar collapsible="icon" className="bg-card border-r">
@@ -19,7 +21,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <SidebarMenuItem>
                   <div className="relative w-full">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Search" className="pl-9 h-9" />
+                    <Input 
+                      placeholder="Search" 
+                      className="pl-9 h-9"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
                   </div>
                 </SidebarMenuItem>
                 <SidebarMenuItem>

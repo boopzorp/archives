@@ -1,15 +1,17 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Plus, WifiOff, Settings } from 'lucide-react';
+import { Plus, WifiOff, Settings, Search as SearchIcon } from 'lucide-react';
 import { AppLayout } from '@/components/app-layout';
 import LinkCard from '@/components/link-card';
 import { AddLinkForm } from '@/components/add-link-form';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import type { Link } from '@/lib/types';
+import { AppProvider, useAppContext } from '@/context/app-context';
 
-export default function Home() {
+function HomePage() {
+  const { searchTerm } = useAppContext();
   const [links, setLinks] = useState<Link[]>([]);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isClient, setIsClient] = useState(false);
@@ -41,6 +43,7 @@ export default function Home() {
       ...newLink,
       id: new Date().toISOString(),
       createdAt: new Date().toISOString(),
+      isFavorite: false,
     };
     setLinks(prevLinks => [linkWithMeta, ...prevLinks]);
     setIsSheetOpen(false);
@@ -50,6 +53,21 @@ export default function Home() {
     setLinks(prevLinks => prevLinks.filter(link => link.id !== id));
   };
   
+  const toggleFavorite = (id: string) => {
+    setLinks(prevLinks => 
+      prevLinks.map(link => 
+        link.id === id ? { ...link, isFavorite: !link.isFavorite } : link
+      )
+    );
+  };
+
+  const filteredLinks = links.filter(link => 
+    link.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    link.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    link.url.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    link.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
   if (!isClient) {
     return (
       <AppLayout>
@@ -95,24 +113,37 @@ export default function Home() {
       </header>
 
       <main className="flex-1 p-4 md:p-8">
-          {links.length > 0 ? (
+          {filteredLinks.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {links.map((link) => (
-                <LinkCard key={link.id} link={link} onDelete={deleteLink} />
+              {filteredLinks.map((link) => (
+                <LinkCard key={link.id} link={link} onDelete={deleteLink} onToggleFavorite={toggleFavorite} />
               ))}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center text-center py-20">
               <div className="p-4 bg-primary/10 rounded-full mb-4">
-                <WifiOff className="w-12 h-12 text-primary" />
+                 {searchTerm ? <SearchIcon className="w-12 h-12 text-primary" /> : <WifiOff className="w-12 h-12 text-primary" />}
               </div>
-              <h2 className="text-2xl font-bold font-headline mb-2">It's quiet in here...</h2>
+              <h2 className="text-2xl font-bold font-headline mb-2">
+                {searchTerm ? 'No links found' : 'It\'s quiet in here...'}
+              </h2>
               <p className="text-muted-foreground max-w-sm">
-                Your saved links will appear here. Get started by adding your first link.
+                {searchTerm 
+                  ? `Your search for "${searchTerm}" did not match any links.` 
+                  : 'Your saved links will appear here. Get started by adding your first link.'
+                }
               </p>
             </div>
           )}
       </main>
     </AppLayout>
+  );
+}
+
+export default function Home() {
+  return (
+    <AppProvider>
+      <HomePage />
+    </AppProvider>
   );
 }

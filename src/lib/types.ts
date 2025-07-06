@@ -6,4 +6,5 @@ export interface Link {
   tags: string[];
   imageUrl?: string;
   createdAt: string;
+  isFavorite?: boolean;
 }
