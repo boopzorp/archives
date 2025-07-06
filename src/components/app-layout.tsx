@@ -127,8 +127,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
         <Sidebar collapsible="icon" className="bg-card border-r">
-          <SidebarHeader className='p-4 flex items-center justify-between'>
-            <h1 className="text-2xl font-bold text-primary tracking-tighter">Archives</h1>
+          <SidebarHeader className='p-4 flex items-center justify-between group-data-[state=collapsed]:justify-center'>
+            <h1 className="text-2xl font-bold text-primary tracking-tighter group-data-[state=collapsed]:hidden">Archives</h1>
             <SidebarTrigger className="hidden md:flex" />
           </SidebarHeader>
           <SidebarContent className="p-2">
