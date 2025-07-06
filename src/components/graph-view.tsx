@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState, useRef } from 'react';
 import { useAppContext } from '@/context/app-context';
 import dynamic from 'next/dynamic';
-import type { NodeObject, LinkObject } from 'react-force-graph';
+import type { NodeObject, LinkObject, ForceGraphInstance } from 'react-force-graph';
 
 // Dynamically import ForceGraph2D to avoid SSR issues
 const ForceGraph2D = dynamic(() => import('react-force-graph').then((mod) => mod.ForceGraph2D), {
@@ -26,6 +26,7 @@ export function GraphView() {
   const { links } = useAppContext();
   const [isClient, setIsClient] = useState(false);
   const [container, setContainer] = useState<{width: number, height: number} | null>(null);
+  const fgRef = useRef<ForceGraphInstance>();
 
   const ref = React.useCallback((node: HTMLDivElement | null) => {
     if (node) {
@@ -87,6 +88,7 @@ export function GraphView() {
     <div ref={ref} className="w-full h-[calc(100vh-150px)] bg-card rounded-lg border relative">
       {container && (
         <ForceGraph2D
+          ref={fgRef}
           width={container.width}
           height={container.height}
           graphData={graphData}
@@ -97,7 +99,7 @@ export function GraphView() {
           linkWidth={0.5}
           backgroundColor="hsl(var(--card))"
           cooldownTicks={100}
-          onEngineStop={instance => instance.zoomToFit(400, 100)}
+          onEngineStop={() => fgRef.current?.zoomToFit(400, 100)}
         />
       )}
     </div>
