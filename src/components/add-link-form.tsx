@@ -55,7 +55,7 @@ export function AddLinkForm({ onAddLink }: AddLinkFormProps) {
     if ('error' in result) {
        toast({
         variant: "destructive",
-        title: "Oh no! Something went wrong.",
+        title: "Couldn't fetch details",
         description: result.error,
       });
     } else {

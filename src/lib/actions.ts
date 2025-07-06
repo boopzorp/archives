@@ -20,6 +20,6 @@ export async function getLinkMetadata(url: string): Promise<SuggestTagsAndTitleO
     return metadata;
   } catch (error) {
     console.error('Error fetching link metadata:', error);
-    return { error: 'Could not fetch metadata for the provided URL. Please check the link or try again later.' };
+    return { error: 'Could not fetch metadata. The page might be too complex to analyze automatically. Please add the details manually.' };
   }
 }
