@@ -146,9 +146,28 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     />
                   </div>
                   <div className="hidden group-data-[state=collapsed]:block">
-                    <SidebarMenuButton tooltip="Search" className="w-full">
-                      <Search />
-                    </SidebarMenuButton>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <SidebarMenuButton tooltip="Search" className="w-full">
+                          <Search />
+                        </SidebarMenuButton>
+                      </DialogTrigger>
+                      <DialogContent className="p-0 top-48 max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="sr-only">Search</DialogTitle>
+                        </DialogHeader>
+                        <div className="relative">
+                          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                          <Input
+                            placeholder="Search..."
+                            className="h-14 w-full border-0 bg-transparent pl-12 pr-4 text-base placeholder:text-muted-foreground focus-visible:ring-0"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            autoFocus
+                          />
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
