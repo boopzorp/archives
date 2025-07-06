@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Plus, WifiOff } from 'lucide-react';
-import Header from '@/components/header';
+import { Plus, WifiOff, Settings } from 'lucide-react';
+import { AppLayout } from '@/components/app-layout';
 import LinkCard from '@/components/link-card';
 import { AddLinkForm } from '@/components/add-link-form';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,7 @@ export default function Home() {
   useEffect(() => {
     setIsClient(true);
     try {
-      const storedLinks = localStorage.getItem('linkflow_links');
+      const storedLinks = localStorage.getItem('linksort_links');
       if (storedLinks) {
         setLinks(JSON.parse(storedLinks));
       }
@@ -29,7 +29,7 @@ export default function Home() {
   useEffect(() => {
     if (isClient) {
       try {
-        localStorage.setItem('linkflow_links', JSON.stringify(links));
+        localStorage.setItem('linksort_links', JSON.stringify(links));
       } catch (error) {
         console.error("Failed to save links to localStorage", error);
       }
@@ -51,14 +51,50 @@ export default function Home() {
   };
   
   if (!isClient) {
-    return null; // Or a loading spinner
+    return (
+      <AppLayout>
+        <div className="p-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="space-y-2">
+                <div className="aspect-video w-full bg-muted rounded-md animate-pulse"></div>
+                <div className="h-5 w-3/4 bg-muted rounded-md animate-pulse"></div>
+                <div className="h-4 w-1/2 bg-muted rounded-md animate-pulse"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </AppLayout>
+    );
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background font-body">
-      <Header />
+    <AppLayout>
+      <header className="flex items-center justify-between p-4 border-b bg-card">
+        <h1 className="text-2xl font-bold">All</h1>
+        <div className="flex items-center gap-2">
+          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+            <SheetTrigger asChild>
+              <Button>
+                <Plus className="-ml-1 h-5 w-5" />
+                New Link
+              </Button>
+            </SheetTrigger>
+            <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+              <SheetHeader>
+                <SheetTitle className="font-headline text-2xl">Add a new link</SheetTitle>
+              </SheetHeader>
+              <AddLinkForm onAddLink={addLink} />
+            </SheetContent>
+          </Sheet>
+          <Button variant="outline">Give Feedback</Button>
+          <Button variant="ghost" size="icon">
+            <Settings className="h-5 w-5" />
+          </Button>
+        </div>
+      </header>
+
       <main className="flex-1 p-4 md:p-8">
-        <div className="container mx-auto">
           {links.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {links.map((link) => (
@@ -72,29 +108,11 @@ export default function Home() {
               </div>
               <h2 className="text-2xl font-bold font-headline mb-2">It's quiet in here...</h2>
               <p className="text-muted-foreground max-w-sm">
-                Your saved links will appear here. Get started by adding your first link using the plus button.
+                Your saved links will appear here. Get started by adding your first link.
               </p>
             </div>
           )}
-        </div>
       </main>
-
-      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetTrigger asChild>
-          <div className="fixed bottom-8 right-8 z-50">
-            <Button size="icon" className="h-16 w-16 rounded-full shadow-lg bg-primary hover:bg-primary/90 transition-transform hover:scale-105 active:scale-95">
-              <Plus className="h-8 w-8" />
-              <span className="sr-only">Add Link</span>
-            </Button>
-          </div>
-        </SheetTrigger>
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle className="font-headline text-2xl">Add a new link</SheetTitle>
-          </SheetHeader>
-          <AddLinkForm onAddLink={addLink} />
-        </SheetContent>
-      </Sheet>
-    </div>
+    </AppLayout>
   );
 }
