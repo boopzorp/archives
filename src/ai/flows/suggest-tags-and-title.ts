@@ -16,9 +16,9 @@ const SuggestTagsAndTitleInputSchema = z.object({
 export type SuggestTagsAndTitleInput = z.infer<typeof SuggestTagsAndTitleInputSchema>;
 
 const SuggestTagsAndTitleOutputSchema = z.object({
-  title: z.string().describe('The title of the article.'),
+  title: z.string().optional().describe('The title of the article. If no title can be found, this can be omitted.'),
   description: z.string().optional().describe('A one or two sentence summary of the page content.'),
-  tags: z.array(z.string()).describe('An array of suggested tags for the link.'),
+  tags: z.array(z.string()).optional().describe('An array of suggested tags for the link.'),
   imageUrl: z.string().url().optional().describe('A URL for a preview image for the link, preferably an Open Graph image.'),
 });
 export type SuggestTagsAndTitleOutput = z.infer<typeof SuggestTagsAndTitleOutputSchema>;
@@ -37,13 +37,33 @@ When analyzing the page, focus on the primary content. Ignore headers, footers, 
 
 Analyze the content of the following URL: {{media url=url}}
 
-Based on your analysis, provide the following information:
+Based on your analysis, provide the following information if available:
 1.  **title**: The main title of the article or project.
 2.  **description**: A concise, one or two-sentence summary of the content.
 3.  **tags**: An array of 3 to 5 relevant keywords or tags that describe the content.
-4.  **imageUrl**: A URL for a suitable preview image. Look for the 'og:image' meta tag first. If it's not available, find another representative image from the page. If no suitable image is found, do not include this field.
+4.  **imageUrl**: A URL for a suitable preview image. Look for the 'og:image' meta tag first. If it's not available, find another representative image from the page.
 
-Your response MUST be a valid JSON object that adheres to the output schema. The 'tags' field MUST be a JSON array of strings.`,
+Your response MUST be a valid JSON object that adheres to the output schema. If you cannot determine a value for an optional field, omit it from the response. The 'tags' field MUST be a JSON array of strings if present.`,
+  config: {
+    safetySettings: [
+      {
+        category: 'HARM_CATEGORY_HARASSMENT',
+        threshold: 'BLOCK_NONE',
+      },
+      {
+        category: 'HARM_CATEGORY_HATE_SPEECH',
+        threshold: 'BLOCK_NONE',
+      },
+      {
+        category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+        threshold: 'BLOCK_NONE',
+      },
+      {
+        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+        threshold: 'BLOCK_NONE',
+      },
+    ],
+  },
 });
 
 const suggestTagsAndTitleFlow = ai.defineFlow(
