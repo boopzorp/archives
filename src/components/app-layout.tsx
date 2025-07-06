@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import {
-  ArrowDownUp, BarChart2, ChevronDown, Folder as FolderIcon, MessageSquare, Plus, Search, Star,
+  ArrowDownUp, BarChart2, ChevronDown, Folder as FolderIcon, MessageSquare, Plus, Search, Star, Tag,
 } from 'lucide-react';
 import { Sidebar, SidebarProvider, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { Input } from './ui/input';
@@ -11,7 +11,7 @@ import { Label } from './ui/label';
 import { useAppContext } from '@/context/app-context';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
-  const { searchTerm, setSearchTerm, folders, addFolder } = useAppContext();
+  const { searchTerm, setSearchTerm, folders, addFolder, tags } = useAppContext();
   const [newFolderName, setNewFolderName] = useState('');
   const [isFolderDialogOpen, setIsFolderDialogOpen] = useState(false);
 
@@ -113,7 +113,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   <span>Tags</span>
               </SidebarGroupLabel>
               <SidebarMenu>
-                  {/* Future tags will be listed here */}
+                  {tags.map((tag) => (
+                    <SidebarMenuItem key={tag}>
+                      <SidebarMenuButton><Tag /><span>{tag}</span></SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
               </SidebarMenu>
             </SidebarGroup>
           </SidebarContent>

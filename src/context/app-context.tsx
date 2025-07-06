@@ -9,6 +9,7 @@ interface AppContextState {
   setSearchTerm: (term: string) => void;
   links: Link[];
   folders: Folder[];
+  tags: string[];
   addLink: (newLink: Omit<Link, 'id' | 'createdAt' | 'isFavorite' | 'folderId'>) => void;
   deleteLink: (id: string) => void;
   updateLink: (id: string, updates: Partial<Omit<Link, 'id'>>) => void;
@@ -22,6 +23,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [links, setLinks] = useState<Link[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
 
   useEffect(() => {
     setIsClient(true);
@@ -58,6 +60,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }
   }, [folders, isClient]);
+
+  useEffect(() => {
+    if (isClient) {
+      const allTags = new Set<string>();
+      links.forEach(link => {
+        if (link.tags) {
+            link.tags.forEach(tag => allTags.add(tag));
+        }
+      });
+      setTags(Array.from(allTags).sort());
+    }
+  }, [links, isClient]);
 
   const addLink = (newLink: Omit<Link, 'id' | 'createdAt' | 'isFavorite' | 'folderId'>) => {
     const linkWithMeta: Link = {
@@ -96,6 +110,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setSearchTerm,
     links,
     folders,
+    tags,
     addLink,
     deleteLink,
     updateLink,
