@@ -29,6 +29,7 @@ interface AddLinkFormProps {
 
 export function AddLinkForm({ onAddLink }: AddLinkFormProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | undefined>();
   const { toast } = useToast();
 
   const form = useForm<AddLinkFormValues>({
@@ -49,6 +50,7 @@ export function AddLinkForm({ onAddLink }: AddLinkFormProps) {
     }
     
     setIsLoading(true);
+    setImageUrl(undefined);
     const result = await getLinkMetadata(url);
     setIsLoading(false);
 
@@ -61,6 +63,9 @@ export function AddLinkForm({ onAddLink }: AddLinkFormProps) {
     } else {
       form.setValue("title", result.title, { shouldValidate: true });
       form.setValue("tags", result.tags.join(', '));
+      if (result.imageUrl) {
+        setImageUrl(result.imageUrl);
+      }
        toast({
         title: "Success!",
         description: "We've automagically filled in the details for you.",
@@ -71,17 +76,9 @@ export function AddLinkForm({ onAddLink }: AddLinkFormProps) {
   const onSubmit = (data: AddLinkFormValues) => {
     const tagsArray = data.tags ? data.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [];
     
-    // Attempt to get a favicon URL
-    let imageUrl = '';
-    try {
-      const urlObject = new URL(data.url);
-      imageUrl = `https://www.google.com/s2/favicons?domain=${urlObject.hostname}&sz=128`;
-    } catch (e) {
-      // invalid URL, but validation should catch this.
-    }
-    
     onAddLink({ ...data, tags: tagsArray, imageUrl });
     form.reset();
+    setImageUrl(undefined);
   };
 
   return (

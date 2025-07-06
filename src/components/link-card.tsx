@@ -30,23 +30,19 @@ export default function LinkCard({ link, onDelete }: LinkCardProps) {
 
   return (
     <Card className="flex flex-col h-full group transition-all duration-300 ease-in-out hover:shadow-xl hover:-translate-y-1 border-border/80 hover:border-primary/50 overflow-hidden">
-      <CardHeader className="flex-row gap-4 items-start pb-4 cursor-pointer" onClick={openLink}>
-        {link.imageUrl && (
-          <div className="relative w-12 h-12 shrink-0">
-             <Image
-              src={link.imageUrl}
-              alt={`${link.title} favicon`}
-              width={48}
-              height={48}
-              className="rounded-lg object-cover border"
-              unoptimized
-            />
-          </div>
-        )}
-        <div className="flex-1">
-          <CardTitle className="text-lg font-headline leading-tight line-clamp-2">{link.title}</CardTitle>
-          <CardDescription className="line-clamp-1 text-sm mt-1">{link.url}</CardDescription>
-        </div>
+      <div className="relative aspect-video w-full overflow-hidden cursor-pointer bg-muted" onClick={openLink}>
+        <Image
+          src={link.imageUrl || `https://placehold.co/400x225.png`}
+          alt={link.title}
+          fill
+          unoptimized
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
+          data-ai-hint="website screenshot"
+        />
+      </div>
+      <CardHeader className="cursor-pointer" onClick={openLink}>
+        <CardTitle className="text-lg font-headline leading-tight line-clamp-2">{link.title}</CardTitle>
+        <CardDescription className="line-clamp-1 text-sm mt-1">{link.url}</CardDescription>
       </CardHeader>
       
       <CardContent className="flex-grow cursor-pointer" onClick={openLink}>
