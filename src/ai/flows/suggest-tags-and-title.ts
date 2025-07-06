@@ -31,7 +31,7 @@ const prompt = ai.definePrompt({
   output: {schema: SuggestTagsAndTitleOutputSchema},
   prompt: `You are an expert at analyzing web pages. For the given URL, please extract the article title and suggest 3-5 relevant tags.
 
-Analyze the content of the following URL: {{{url}}}
+Analyze the content of the following URL: {{media url=url}}
 
 Your response MUST be a valid JSON object that adheres to the output schema. The 'tags' field MUST be a JSON array of strings.`,
 });
