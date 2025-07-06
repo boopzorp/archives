@@ -1,14 +1,29 @@
 'use client';
-
+import React, { useState } from 'react';
 import {
-  ArrowDownUp, BarChart2, ChevronDown, ChevronRight, Folder as FolderIcon, MessageSquare, Plus, Search, Star,
+  ArrowDownUp, BarChart2, ChevronDown, Folder as FolderIcon, MessageSquare, Plus, Search, Star,
 } from 'lucide-react';
-import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider } from '@/components/ui/sidebar';
+import { Sidebar, SidebarProvider, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { Input } from './ui/input';
+import { Button } from './ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { Label } from './ui/label';
 import { useAppContext } from '@/context/app-context';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
-  const { searchTerm, setSearchTerm } = useAppContext();
+  const { searchTerm, setSearchTerm, folders, addFolder } = useAppContext();
+  const [newFolderName, setNewFolderName] = useState('');
+  const [isFolderDialogOpen, setIsFolderDialogOpen] = useState(false);
+
+  const handleAddFolder = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newFolderName.trim()) {
+      addFolder(newFolderName.trim());
+      setNewFolderName('');
+      setIsFolderDialogOpen(false);
+    }
+  };
+
   return (
     <SidebarProvider>
         <Sidebar collapsible="icon" className="bg-card border-r">
@@ -55,50 +70,50 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   <SidebarMenuItem>
                       <SidebarMenuButton isActive={true}><FolderIcon /><span>All</span></SidebarMenuButton>
                   </SidebarMenuItem>
+                  {folders.map((folder) => (
+                    <SidebarMenuItem key={folder.id}>
+                      <SidebarMenuButton><FolderIcon /><span>{folder.name}</span></SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
                   <SidebarMenuItem>
-                      <SidebarMenuButton><FolderIcon /><span>Restaurants To Try</span></SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                      <SidebarMenuButton><FolderIcon /><span>New Couch For Living Room</span></SidebarMenuButton>
-                  </SidebarMenuItem>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton><FolderIcon /><span>Long Reads</span></SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                      <SidebarMenuButton><Plus /><span>New folder</span></SidebarMenuButton>
+                    <Dialog open={isFolderDialogOpen} onOpenChange={setIsFolderDialogOpen}>
+                      <DialogTrigger asChild>
+                        <SidebarMenuButton className="w-full justify-start"><Plus /><span>New folder</span></SidebarMenuButton>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[425px]">
+                        <form onSubmit={handleAddFolder}>
+                          <DialogHeader>
+                            <DialogTitle>Create New Folder</DialogTitle>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4">
+                            <div className="grid grid-cols-4 items-center gap-4">
+                              <Label htmlFor="name" className="text-right">
+                                Name
+                              </Label>
+                              <Input
+                                id="name"
+                                value={newFolderName}
+                                onChange={(e) => setNewFolderName(e.target.value)}
+                                className="col-span-3"
+                                autoFocus
+                              />
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button type="submit">Create Folder</Button>
+                          </DialogFooter>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
                   </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroup>
             <SidebarGroup>
-              <SidebarGroupLabel className='flex items-center justify-between'>
-                  <span>Auto Tags</span>
-                  <ChevronDown className="h-4 w-4" />
+              <SidebarGroupLabel>
+                  <span>Tags</span>
               </SidebarGroupLabel>
               <SidebarMenu>
-                  <SidebarMenuItem>
-                      <SidebarMenuButton><ChevronRight /><span>Sports</span></SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                      <SidebarMenuButton><ChevronRight /><span>Hobbies & Leisure</span></SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                      <SidebarMenuButton><ChevronRight /><span>Food & Drink</span></SidebarMenuButton>
-                  </SidebarMenuItem>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton><ChevronRight /><span>Home & Garden</span></SidebarMenuButton>
-                  </SidebarMenuItem>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton><ChevronRight /><span>Books & Literature</span></SidebarMenuButton>
-                  </SidebarMenuItem>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton><ChevronRight /><span>News</span></SidebarMenuButton>
-                  </SidebarMenuItem>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton><ChevronRight /><span>Computers & Electronics</span></SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                      <SidebarMenuButton><ChevronRight /><span>Science</span></SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {/* Future tags will be listed here */}
               </SidebarMenu>
             </SidebarGroup>
           </SidebarContent>

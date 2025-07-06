@@ -24,7 +24,7 @@ const addLinkFormSchema = z.object({
 type AddLinkFormValues = z.infer<typeof addLinkFormSchema>;
 
 interface AddLinkFormProps {
-  onAddLink: (link: Omit<Link, 'id' | 'createdAt'>) => void;
+  onAddLink: (link: Omit<Link, 'id' | 'createdAt' | 'isFavorite' | 'folderId'>) => void;
 }
 
 export function AddLinkForm({ onAddLink }: AddLinkFormProps) {

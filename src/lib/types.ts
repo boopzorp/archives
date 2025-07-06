@@ -7,4 +7,10 @@ export interface Link {
   imageUrl?: string;
   createdAt: string;
   isFavorite?: boolean;
+  folderId?: string | null;
+}
+
+export interface Folder {
+  id: string;
+  name: string;
 }

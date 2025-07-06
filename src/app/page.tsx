@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Plus, WifiOff, Settings, Search as SearchIcon } from 'lucide-react';
 import { AppLayout } from '@/components/app-layout';
 import LinkCard from '@/components/link-card';
@@ -11,65 +11,23 @@ import type { Link } from '@/lib/types';
 import { AppProvider, useAppContext } from '@/context/app-context';
 
 function HomePage() {
-  const { searchTerm } = useAppContext();
-  const [links, setLinks] = useState<Link[]>([]);
+  const { searchTerm, links, addLink } = useAppContext();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [isClient, setIsClient] = useState(false);
 
-  useEffect(() => {
-    setIsClient(true);
-    try {
-      const storedLinks = localStorage.getItem('linksort_links');
-      if (storedLinks) {
-        setLinks(JSON.parse(storedLinks));
-      }
-    } catch (error) {
-      console.error("Failed to parse links from localStorage", error);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isClient) {
-      try {
-        localStorage.setItem('linksort_links', JSON.stringify(links));
-      } catch (error) {
-        console.error("Failed to save links to localStorage", error);
-      }
-    }
-  }, [links, isClient]);
-
-  const addLink = (newLink: Omit<Link, 'id' | 'createdAt'>) => {
-    const linkWithMeta: Link = {
-      ...newLink,
-      id: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      isFavorite: false,
-    };
-    setLinks(prevLinks => [linkWithMeta, ...prevLinks]);
+  const handleAddLink = (newLink: Omit<Link, 'id' | 'createdAt' | 'isFavorite' | 'folderId'>) => {
+    addLink(newLink);
     setIsSheetOpen(false);
-  };
-
-  const deleteLink = (id: string) => {
-    setLinks(prevLinks => prevLinks.filter(link => link.id !== id));
-  };
-  
-  const toggleFavorite = (id: string) => {
-    setLinks(prevLinks => 
-      prevLinks.map(link => 
-        link.id === id ? { ...link, isFavorite: !link.isFavorite } : link
-      )
-    );
   };
 
   const filteredLinks = links.filter(link => 
     link.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    link.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (link.description && link.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
     link.url.toLowerCase().includes(searchTerm.toLowerCase()) ||
     link.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
   );
-
-  if (!isClient) {
-    return (
+  
+  if (typeof window === 'undefined') {
+     return (
       <AppLayout>
         <div className="p-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -102,7 +60,7 @@ function HomePage() {
               <SheetHeader>
                 <SheetTitle className="font-headline text-2xl">Add a new link</SheetTitle>
               </SheetHeader>
-              <AddLinkForm onAddLink={addLink} />
+              <AddLinkForm onAddLink={handleAddLink} />
             </SheetContent>
           </Sheet>
           <Button variant="outline">Give Feedback</Button>
@@ -116,7 +74,7 @@ function HomePage() {
           {filteredLinks.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredLinks.map((link) => (
-                <LinkCard key={link.id} link={link} onDelete={deleteLink} onToggleFavorite={toggleFavorite} />
+                <LinkCard key={link.id} link={link} />
               ))}
             </div>
           ) : (
@@ -125,7 +83,7 @@ function HomePage() {
                  {searchTerm ? <SearchIcon className="w-12 h-12 text-primary" /> : <WifiOff className="w-12 h-12 text-primary" />}
               </div>
               <h2 className="text-2xl font-bold font-headline mb-2">
-                {searchTerm ? 'No links found' : 'It\'s quiet in here...'}
+                {searchTerm ? 'No links found' : "It's quiet in here..."}
               </h2>
               <p className="text-muted-foreground max-w-sm">
                 {searchTerm 
