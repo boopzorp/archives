@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, WifiOff, Settings, Search as SearchIcon, Star } from 'lucide-react';
 import { AppLayout } from '@/components/app-layout';
 import LinkCard from '@/components/link-card';
@@ -14,6 +14,11 @@ import { AppProvider, useAppContext } from '@/context/app-context';
 function HomePage() {
   const { searchTerm, links, addLink, activeFilter, folders } = useAppContext();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const handleAddLink = (newLink: Omit<Link, 'id' | 'createdAt' | 'isFavorite' | 'folderId'>) => {
     addLink(newLink);
@@ -64,20 +69,28 @@ function HomePage() {
     }
   };
 
-  if (typeof window === 'undefined') {
+  if (!isMounted) {
      return (
       <AppLayout>
-        <div className="p-8">
+        <header className="flex items-center justify-between p-4 border-b bg-card">
+          <div className="h-8 w-32 bg-muted rounded-md animate-pulse" />
+          <div className="flex items-center gap-2">
+            <div className="h-10 w-28 bg-muted rounded-md animate-pulse" />
+            <div className="h-10 w-36 bg-muted rounded-md animate-pulse" />
+            <div className="h-10 w-10 bg-muted rounded-md animate-pulse" />
+          </div>
+        </header>
+        <main className="p-4 md:p-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {[...Array(8)].map((_, i) => (
               <div key={i} className="space-y-2">
                 <div className="aspect-video w-full bg-muted rounded-md animate-pulse"></div>
-                <div className="h-5 w-3/4 bg-muted rounded-md animate-pulse"></div>
+                <div className="h-5 w-3/4 bg-muted rounded-md animate-pulse mt-4"></div>
                 <div className="h-4 w-1/2 bg-muted rounded-md animate-pulse"></div>
               </div>
             ))}
           </div>
-        </div>
+        </main>
       </AppLayout>
     );
   }
