@@ -24,6 +24,18 @@ interface GraphLink extends LinkObject {
   target: string;
 }
 
+// Helper function to generate a consistent color from a string
+const tagToColor = (tag: string) => {
+  let hash = 0;
+  if (tag.length === 0) return 'hsl(0, 0%, 80%)';
+  for (let i = 0; i < tag.length; i++) {
+    hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  const hue = Math.abs(hash % 360);
+  return `hsl(${hue}, 70%, 50%)`;
+};
+
 export function GraphView() {
   const { links } = useAppContext();
   const [isClient, setIsClient] = useState(false);
@@ -44,23 +56,26 @@ export function GraphView() {
     setIsClient(true);
   }, []);
 
-  const graphData = useMemo(() => {
-    if (!isClient) return { nodes: [], links: [] };
+  const { graphData, nodeMap } = useMemo(() => {
+    if (!isClient) return { graphData: { nodes: [], links: [] }, nodeMap: new Map() };
 
     const nodes: GraphNode[] = [];
+    const localNodeMap = new Map<string, GraphNode>();
     const nodeSet = new Set<string>();
     const graphLinks: GraphLink[] = [];
     const tagSet = new Set<string>();
 
     links.forEach(link => {
       if (!nodeSet.has(link.id)) {
-        nodes.push({
+        const node: GraphNode = {
           id: link.id,
           name: link.title,
           type: 'link',
           url: link.url,
           description: link.description,
-        });
+        };
+        nodes.push(node);
+        localNodeMap.set(link.id, node);
         nodeSet.add(link.id);
       }
       
@@ -72,16 +87,18 @@ export function GraphView() {
 
     tagSet.forEach(tag => {
       if (!nodeSet.has(tag)) {
-        nodes.push({
+        const node: GraphNode = {
           id: tag,
           name: `#${tag}`,
           type: 'tag',
-        });
+        };
+        nodes.push(node);
+        localNodeMap.set(tag, node);
         nodeSet.add(tag);
       }
     });
 
-    return { nodes, links: graphLinks };
+    return { graphData: { nodes, links: graphLinks }, nodeMap: localNodeMap };
   }, [links, isClient]);
 
   if (!isClient) {
@@ -109,10 +126,23 @@ export function GraphView() {
               window.open(gNode.url, '_blank', 'noopener,noreferrer');
             }
           }}
-          nodeVal={node => (node as GraphNode).type === 'tag' ? 4 : 1}
-          nodeColor={node => (node as GraphNode).type === 'tag' ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))'}
-          linkColor={() => 'hsl(var(--border))'}
-          linkWidth={0.5}
+          nodeVal={node => (node as GraphNode).type === 'tag' ? 4 : 2}
+          nodeColor={node => {
+            const gNode = node as GraphNode;
+            if (gNode.type === 'tag') {
+              return tagToColor(gNode.id);
+            }
+            return 'hsl(var(--muted-foreground))';
+          }}
+          linkColor={link => {
+            const targetNode = nodeMap.get(link.target as string);
+            if (targetNode && targetNode.type === 'tag') {
+              const color = tagToColor(targetNode.id);
+              return color.replace(')', ', 0.3)').replace('hsl', 'hsla');
+            }
+            return 'rgba(128, 128, 128, 0.2)';
+          }}
+          linkWidth={1}
           backgroundColor="hsl(var(--card))"
           cooldownTicks={100}
           onEngineStop={() => fgRef.current?.zoomToFit(400, 100)}
