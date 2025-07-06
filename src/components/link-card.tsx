@@ -1,4 +1,4 @@
-import Image from "next/image";
+
 import { Trash2 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,13 +31,11 @@ export default function LinkCard({ link, onDelete }: LinkCardProps) {
   return (
     <Card className="flex flex-col h-full group transition-all duration-300 ease-in-out hover:shadow-xl hover:-translate-y-1 border-border/80 hover:border-primary/50 overflow-hidden">
       <div className="relative aspect-video w-full overflow-hidden cursor-pointer bg-muted" onClick={openLink}>
-        <Image
-          src={link.imageUrl || `https://placehold.co/400x225.png`}
-          alt={link.title}
-          fill
-          unoptimized
-          className="object-cover transition-transform duration-300 group-hover:scale-105"
-          data-ai-hint="website screenshot"
+        <iframe
+          src={link.url}
+          title={link.title}
+          className="w-full h-full border-0 pointer-events-none"
+          loading="lazy"
         />
       </div>
       <CardHeader className="cursor-pointer" onClick={openLink}>
