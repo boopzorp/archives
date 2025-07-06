@@ -47,13 +47,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setIsClient(true);
     try {
-      const storedLinks = localStorage.getItem('linksort_links');
+      const storedLinks = localStorage.getItem('archives_links');
       if (storedLinks) setLinks(JSON.parse(storedLinks));
       
-      const storedFolders = localStorage.getItem('linksort_folders');
+      const storedFolders = localStorage.getItem('archives_folders');
       if (storedFolders) setFolders(JSON.parse(storedFolders));
 
-      const storedTags = localStorage.getItem('linksort_tags');
+      const storedTags = localStorage.getItem('archives_tags');
       if (storedTags) setTags(JSON.parse(storedTags));
     } catch (error) {
       console.error("Failed to parse data from localStorage", error);
@@ -63,7 +63,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (isClient) {
       try {
-        localStorage.setItem('linksort_links', JSON.stringify(links));
+        localStorage.setItem('archives_links', JSON.stringify(links));
       } catch (error) {
         console.error("Failed to save links to localStorage", error);
       }
@@ -73,7 +73,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (isClient) {
       try {
-        localStorage.setItem('linksort_folders', JSON.stringify(folders));
+        localStorage.setItem('archives_folders', JSON.stringify(folders));
       } catch (error) {
         console.error("Failed to save folders to localStorage", error);
       }
@@ -83,7 +83,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (isClient) {
       try {
-        localStorage.setItem('linksort_tags', JSON.stringify(tags));
+        localStorage.setItem('archives_tags', JSON.stringify(tags));
       } catch (error) {
         console.error("Failed to save tags to localStorage", error);
       }

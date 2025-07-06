@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
-  title: 'Linksort',
+  title: 'Archives',
   description: 'A cross platform link archive app',
 };
 

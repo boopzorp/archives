@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import type { Link } from '@/lib/types';
 import { AppProvider, useAppContext } from '@/context/app-context';
 import { format, isToday, isYesterday, parseISO } from 'date-fns';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 
 function HomePage() {
   const { searchTerm, links, addLink, updateLink, activeFilter, folders, groupBy, sortBy } = useAppContext();
@@ -147,10 +148,13 @@ function HomePage() {
      return (
       <AppLayout>
         <header className="flex items-center justify-between p-4 border-b bg-card">
-          <div className="h-8 w-32 bg-muted rounded-md animate-pulse" />
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 bg-muted rounded-md animate-pulse md:hidden" />
+            <div className="h-8 w-32 bg-muted rounded-md animate-pulse" />
+          </div>
           <div className="flex items-center gap-2">
             <div className="h-10 w-28 bg-muted rounded-md animate-pulse" />
-            <div className="h-10 w-36 bg-muted rounded-md animate-pulse" />
+            <div className="h-10 w-36 bg-muted rounded-md animate-pulse hidden md:flex" />
             <div className="h-10 w-10 bg-muted rounded-md animate-pulse" />
           </div>
         </header>
@@ -172,7 +176,10 @@ function HomePage() {
   return (
     <AppLayout>
       <header className="flex items-center justify-between p-4 border-b bg-card">
-        <h1 className="text-2xl font-bold">{getHeaderTitle()}</h1>
+        <div className="flex items-center gap-2">
+          <SidebarTrigger className="md:hidden" />
+          <h1 className="text-2xl font-bold">{getHeaderTitle()}</h1>
+        </div>
         <div className="flex items-center gap-2">
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
@@ -188,7 +195,7 @@ function HomePage() {
               <AddLinkForm onSave={handleSaveLink} />
             </SheetContent>
           </Sheet>
-          <Button variant="outline">Give Feedback</Button>
+          <Button variant="outline" className="hidden md:inline-flex">Give Feedback</Button>
           <Button variant="ghost" size="icon">
             <Settings className="h-5 w-5" />
           </Button>

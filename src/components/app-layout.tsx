@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import {
   ArrowDown, ArrowDownAZ, ArrowUp, ArrowUpAZ, BarChart2, ChevronDown, Folder as FolderIcon, MessageSquare, Plus, Search, Star, Tag, MoreHorizontal,
 } from 'lucide-react';
-import { Sidebar, SidebarProvider, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuAction } from '@/components/ui/sidebar';
+import { Sidebar, SidebarProvider, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuAction, SidebarTrigger } from '@/components/ui/sidebar';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
@@ -127,8 +127,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
         <Sidebar collapsible="icon" className="bg-card border-r">
-          <SidebarHeader className='p-4'>
-            <h1 className="text-2xl font-bold text-primary tracking-tighter">Linkflow</h1>
+          <SidebarHeader className='p-4 flex items-center justify-between'>
+            <h1 className="text-2xl font-bold text-primary tracking-tighter">Archives</h1>
+            <SidebarTrigger className="hidden md:flex" />
           </SidebarHeader>
           <SidebarContent className="p-2">
             <SidebarGroup>
