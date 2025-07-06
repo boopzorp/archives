@@ -12,16 +12,12 @@ export async function getLinkMetadata(url: string): Promise<SuggestTagsAndTitleO
 
   try {
     let effectiveUrl = url;
-    let isTweet = false;
-    try {
+    const isTweet = /^(https?:\/\/)(twitter\.com|x\.com)/.test(url);
+    
+    if (isTweet) {
         const urlObj = new URL(url);
-        if (urlObj.hostname === 'x.com' || urlObj.hostname === 'twitter.com') {
-            urlObj.hostname = 'fxtwitter.com';
-            effectiveUrl = urlObj.toString();
-            isTweet = true;
-        }
-    } catch (e) {
-        // If URL parsing fails, proceed with the original URL
+        urlObj.hostname = 'fxtwitter.com';
+        effectiveUrl = urlObj.toString();
     }
 
     const response = await fetch(effectiveUrl, {
@@ -45,25 +41,21 @@ export async function getLinkMetadata(url: string): Promise<SuggestTagsAndTitleO
         $(`meta[name="${name}"]`).attr('content')
       );
     };
-
-    let title = getMetaTag('title') || $('title').text() || '';
-    let description = getMetaTag('description') || '';
+    
+    let title: string;
+    let description: string;
     let imageUrl = getMetaTag('image');
 
     if (isTweet) {
-        // For fxtwitter, og:title is the author, and og:description is the tweet content.
-        const tweetAuthor = title.replace(' on X', '').replace(' on Twitter', '');
-        const tweetContent = description;
-        
-        // If the tweet has text content, use it as the title.
-        if (tweetContent) {
-            title = tweetContent;
-            description = `Tweet from ${tweetAuthor}`;
-        } else {
-            // If there's no text (e.g., just an image), use the author's name as the title.
-            title = tweetAuthor;
-            description = ''; // Keep description clean
-        }
+        const tweetContent = getMetaTag('description');
+        const authorInfo = getMetaTag('title');
+        const tweetAuthor = authorInfo ? authorInfo.replace(/ on (X|Twitter)$/, '') : '';
+
+        title = tweetContent || tweetAuthor || $('title').text() || '';
+        description = tweetContent ? `Tweet from ${tweetAuthor}` : '';
+    } else {
+        title = getMetaTag('title') || $('title').text() || '';
+        description = getMetaTag('description') || '';
     }
 
     if (imageUrl) {
@@ -71,6 +63,7 @@ export async function getLinkMetadata(url: string): Promise<SuggestTagsAndTitleO
         const absoluteUrl = new URL(imageUrl, url);
         imageUrl = absoluteUrl.href;
       } catch (e) {
+        // if image url is invalid, just ignore it
         imageUrl = undefined;
       }
     }
@@ -79,7 +72,7 @@ export async function getLinkMetadata(url: string): Promise<SuggestTagsAndTitleO
       title: title.trim(),
       description: description.trim(),
       imageUrl,
-      tags: [], // Tags are no longer auto-generated
+      tags: [],
     };
 
     return metadata;

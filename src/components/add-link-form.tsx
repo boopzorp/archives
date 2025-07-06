@@ -92,16 +92,27 @@ export function AddLinkForm({ onSave, link }: LinkFormProps) {
         description: result.error,
       });
     } else {
-      form.setValue("title", result.title || '', { shouldValidate: true });
+      const hasData = result.title || result.description || result.imageUrl;
+      
+      form.setValue("title", result.title || '', { shouldValidate: !!result.title });
       form.setValue("description", result.description || '');
       form.setValue("tags", result.tags?.join(', ') || '');
       if (result.imageUrl) {
         setImageUrl(result.imageUrl);
       }
-       toast({
-        title: "Success!",
-        description: "We've automagically filled in the details for you.",
-      });
+
+      if (hasData) {
+        toast({
+          title: "Success!",
+          description: "We've automagically filled in the details for you.",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Couldn't fetch details",
+          description: "We couldn't find any metadata for this link. Please add the details manually.",
+        });
+      }
     }
   };
 
