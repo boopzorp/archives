@@ -29,14 +29,11 @@ const prompt = ai.definePrompt({
   name: 'suggestTagsAndTitlePrompt',
   input: {schema: SuggestTagsAndTitleInputSchema},
   output: {schema: SuggestTagsAndTitleOutputSchema},
-  prompt: `You are a helpful assistant designed to suggest relevant tags and identify the article title for a given URL.
+  prompt: `You are an expert at analyzing web pages. For the given URL, please extract the article title and suggest 3-5 relevant tags.
 
-  Analyze the content of the following URL and extract the article title and suggest relevant tags:
+Analyze the content of the following URL: {{{url}}}
 
-  URL: {{{url}}}
-
-  Title: (The title of the article)
-  Tags: (A comma-separated list of relevant tags)`, // Ensure the model outputs comma-separated tags
+Your response MUST be a valid JSON object that adheres to the output schema. The 'tags' field MUST be a JSON array of strings.`,
 });
 
 const suggestTagsAndTitleFlow = ai.defineFlow(
