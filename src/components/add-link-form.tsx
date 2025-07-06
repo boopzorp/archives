@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { getLinkMetadata } from '@/lib/actions';
+import { suggestTagsAndTitle } from '@/ai/flows/suggest-tags-and-title';
 import { useToast } from '@/hooks/use-toast';
 import type { Link } from '@/lib/types';
 
@@ -82,17 +82,10 @@ export function AddLinkForm({ onSave, link }: LinkFormProps) {
     setImageUrl(undefined);
     form.clearErrors("url");
     
-    const result = await getLinkMetadata(url);
-    setIsLoading(false);
-
-    if ('error' in result) {
-       toast({
-        variant: "destructive",
-        title: "Couldn't fetch details",
-        description: result.error,
-      });
-    } else {
-      const hasData = result.title || result.description || result.imageUrl;
+    try {
+      const result = await suggestTagsAndTitle({ url });
+      
+      const hasData = result.title || result.description || result.imageUrl || (result.tags && result.tags.length > 0);
       
       form.setValue("title", result.title || '', { shouldValidate: !!result.title });
       form.setValue("description", result.description || '');
@@ -107,12 +100,21 @@ export function AddLinkForm({ onSave, link }: LinkFormProps) {
           description: "We've automagically filled in the details for you.",
         });
       } else {
-        toast({
+         toast({
           variant: "destructive",
           title: "Couldn't fetch details",
           description: "We couldn't find any metadata for this link. Please add the details manually.",
         });
       }
+    } catch (error) {
+       toast({
+        variant: "destructive",
+        title: "Couldn't fetch details",
+        description: "An error occurred while fetching link details. Please try again.",
+      });
+      console.error("Error fetching link metadata:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 

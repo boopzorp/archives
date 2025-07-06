@@ -34,13 +34,23 @@ const prompt = ai.definePrompt({
   output: {schema: SuggestTagsAndTitleOutputSchema},
   prompt: `You are an expert at analyzing web pages to extract key information. Your task is to identify the main title, generate a short description, create relevant tags, and find a preview image for the content at the provided URL.
 
-When analyzing the page, focus on the primary content. Ignore headers, footers, navigation bars, and comment sections if possible. For a project showcase page like on Behance or Dribbble, the title is the project title, and tags should relate to the project's subject, style, and industry.
+When analyzing the page, focus on the primary content. Ignore headers, footers, navigation bars, and comment sections if possible.
+
+**Special Instructions for Twitter/X URLs:**
+- If the URL is from twitter.com or x.com, it is a tweet.
+- The **title** should be the full text content of the tweet itself.
+- If the tweet has no text but has an image, the title can be "Tweet from [Author Name]".
+- The **description** should be a short attribution, like "Tweet from [Author Name] (@author_handle)".
+- The **imageUrl** should be the main image attached to the tweet, if one exists.
+
+**General Instructions:**
+- For a project showcase page like on Behance or Dribbble, the title is the project title, and tags should relate to the project's subject, style, and industry.
 
 Analyze the content of the following URL: {{media url=url}}
 
 Based on your analysis, provide the following information if available:
-1.  **title**: The main title of the article or project.
-2.  **description**: A concise, one or two-sentence summary of the content.
+1.  **title**: The main title of the article, project, or tweet. If no title can be found, this can be omitted.
+2.  **description**: A concise, one or two-sentence summary of the content, or the tweet attribution.
 3.  **tags**: An array of 3 to 5 relevant keywords or tags that describe the content.
 4.  **imageUrl**: A URL for a suitable preview image. Look for the 'og:image' meta tag first. If it's not available, find another representative image from the page. The URL must be an absolute URL (it must start with http:// or https://).
 
