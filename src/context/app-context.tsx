@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import type { Link, Folder, Tag } from '@/lib/types';
+import type { Link, Folder, Tag, GroupByOption } from '@/lib/types';
 
 type ActiveFilter = {
   type: 'all' | 'folder' | 'tag' | 'favorites' | 'graph';
@@ -26,6 +26,8 @@ interface AppContextState {
   updateTag: (name: string, updates: Partial<Omit<Tag, 'name'>>) => void;
   activeFilter: ActiveFilter;
   setActiveFilter: (filter: ActiveFilter) => void;
+  groupBy: GroupByOption;
+  setGroupBy: (option: GroupByOption) => void;
 }
 
 const AppContext = createContext<AppContextState | undefined>(undefined);
@@ -37,6 +39,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>({ type: 'all', value: null });
+  const [groupBy, setGroupBy] = useState<GroupByOption>('none');
 
   useEffect(() => {
     setIsClient(true);
@@ -228,6 +231,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateTag,
     activeFilter,
     setActiveFilter,
+    groupBy,
+    setGroupBy,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

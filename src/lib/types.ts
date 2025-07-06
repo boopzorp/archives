@@ -20,3 +20,5 @@ export interface Tag {
   name: string;
   color?: string;
 }
+
+export type GroupByOption = 'none' | 'day' | 'month' | 'year';

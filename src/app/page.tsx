@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Plus, WifiOff, Settings, Search as SearchIcon, Star } from 'lucide-react';
 import { AppLayout } from '@/components/app-layout';
 import LinkCard from '@/components/link-card';
@@ -10,9 +10,10 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import type { Link } from '@/lib/types';
 import { AppProvider, useAppContext } from '@/context/app-context';
+import { format, isToday, isYesterday, parseISO } from 'date-fns';
 
 function HomePage() {
-  const { searchTerm, links, addLink, activeFilter, folders } = useAppContext();
+  const { searchTerm, links, addLink, activeFilter, folders, groupBy } = useAppContext();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -25,7 +26,7 @@ function HomePage() {
     setIsSheetOpen(false);
   };
 
-  const filteredBySearch = links.filter(link => {
+  const filteredBySearch = useMemo(() => links.filter(link => {
     if (!searchTerm) return true;
     const lowercasedTerm = searchTerm.toLowerCase();
     return (
@@ -34,9 +35,9 @@ function HomePage() {
       link.url.toLowerCase().includes(lowercasedTerm) ||
       link.tags.some(tag => tag.toLowerCase().includes(lowercasedTerm))
     )
-  });
+  }), [links, searchTerm]);
 
-  const filteredLinks = filteredBySearch.filter(link => {
+  const filteredLinks = useMemo(() => filteredBySearch.filter(link => {
     switch (activeFilter.type) {
       case 'all':
         return true;
@@ -49,8 +50,44 @@ function HomePage() {
       default:
         return true;
     }
-  });
+  }), [filteredBySearch, activeFilter]);
   
+  const groupedAndFilteredLinks = useMemo(() => {
+    if (groupBy === 'none' || filteredLinks.length === 0) {
+      return [{ groupTitle: null, links: filteredLinks }];
+    }
+
+    const groups: { groupTitle: string; links: Link[] }[] = [];
+    const groupMap = new Map<string, Link[]>();
+
+    for (const link of filteredLinks) {
+      const date = parseISO(link.createdAt);
+      let groupKey = '';
+
+      if (groupBy === 'day') {
+        if (isToday(date)) groupKey = 'Today';
+        else if (isYesterday(date)) groupKey = 'Yesterday';
+        else groupKey = format(date, 'MMMM d, yyyy');
+      } else if (groupBy === 'month') {
+        groupKey = format(date, 'MMMM yyyy');
+      } else if (groupBy === 'year') {
+        groupKey = format(date, 'yyyy');
+      }
+
+      if (groupKey) {
+        if (!groupMap.has(groupKey)) {
+          const newGroupLinks: Link[] = [];
+          groupMap.set(groupKey, newGroupLinks);
+          groups.push({ groupTitle: groupKey, links: newGroupLinks });
+        }
+        groupMap.get(groupKey)!.push(link);
+      }
+    }
+    
+    return groups;
+  }, [filteredLinks, groupBy]);
+
+
   const getHeaderTitle = () => {
     switch (activeFilter.type) {
       case 'all':
@@ -126,10 +163,19 @@ function HomePage() {
           <GraphView />
         ) : (
           <>
-            {filteredLinks.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredLinks.map((link) => (
-                  <LinkCard key={link.id} link={link} />
+            {groupedAndFilteredLinks.length > 0 && groupedAndFilteredLinks[0].links.length > 0 ? (
+              <div className="space-y-8">
+                {groupedAndFilteredLinks.map(({ groupTitle, links: groupLinks }) => (
+                  <section key={groupTitle || 'all-links'}>
+                    {groupTitle && (
+                      <h2 className="text-xl font-bold mb-4 px-1">{groupTitle}</h2>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      {groupLinks.map((link) => (
+                        <LinkCard key={link.id} link={link} />
+                      ))}
+                    </div>
+                  </section>
                 ))}
               </div>
             ) : (

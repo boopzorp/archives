@@ -10,8 +10,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { Label } from './ui/label';
 import { useAppContext } from '@/context/app-context';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from './ui/dropdown-menu';
-import type { Folder, Tag as TagType } from '@/lib/types';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from './ui/dropdown-menu';
+import type { Folder, Tag as TagType, GroupByOption } from '@/lib/types';
 
 const paletteColors = [
   '#fca5a5', '#fdba74', '#fde047', '#bef264', '#86efac', '#67e8f9', 
@@ -26,6 +26,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     folders, addFolder, updateFolder, deleteFolder,
     tags, renameTag, updateTag, deleteTag,
     activeFilter, setActiveFilter,
+    groupBy, setGroupBy,
   } = useAppContext();
   
   // Folder states
@@ -98,6 +99,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       updateTag(id, { color });
     }
   };
+  
+  const handleGroupByChange = (value: string) => {
+    setGroupBy(value as GroupByOption);
+  }
+
+  const getGroupByLabel = () => {
+    const capitalized = groupBy.charAt(0).toUpperCase() + groupBy.slice(1);
+    return `Group by ${capitalized}`;
+  }
 
   return (
     <SidebarProvider>
@@ -123,7 +133,22 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     <SidebarMenuButton tooltip="Sort by newest first"><ArrowDownUp /><span>Sort by newest first</span></SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                    <SidebarMenuButton tooltip="Group by none"><FolderIcon /><span>Group by none</span></SidebarMenuButton>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <SidebarMenuButton tooltip={getGroupByLabel()}>
+                        <FolderIcon /><span>{getGroupByLabel()}</span>
+                      </SidebarMenuButton>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuLabel>Group By</DropdownMenuLabel>
+                      <DropdownMenuRadioGroup value={groupBy} onValueChange={handleGroupByChange}>
+                        <DropdownMenuRadioItem value="none">None</DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="day">Day</DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="month">Month</DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="year">Year</DropdownMenuRadioItem>
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                     <SidebarMenuButton 
