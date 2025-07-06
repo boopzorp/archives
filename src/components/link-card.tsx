@@ -25,12 +25,40 @@ interface LinkCardProps {
   onEdit: (link: Link) => void;
 }
 
-function getDomain(url: string) {
-    try {
-        return new URL(url).hostname.replace('www.', '');
-    } catch (e) {
-        return '';
+function getBrandName(url: string): string {
+  try {
+    const hostname = new URL(url).hostname.replace('www.', '');
+
+    const specialCases: { [key: string]: string } = {
+      'x.com': 'X',
+      'newyorker.com': 'The New Yorker',
+      'github.com': 'GitHub',
+      'youtube.com': 'YouTube',
+      'youtu.be': 'YouTube',
+      'vimeo.com': 'Vimeo',
+      'behance.net': 'Behance',
+      'dribbble.com': 'Dribbble',
+      'medium.com': 'Medium',
+      'substack.com': 'Substack',
+      'figma.com': 'Figma',
+      'producthunt.com': 'Product Hunt',
+      'techcrunch.com': 'TechCrunch',
+      'theverge.com': 'The Verge',
+      'nytimes.com': 'The New York Times',
+    };
+
+    for (const key in specialCases) {
+      if (hostname.endsWith(key)) {
+        return specialCases[key];
+      }
     }
+
+    const domainParts = hostname.split('.');
+    const mainPart = domainParts[0];
+    return mainPart.charAt(0).toUpperCase() + mainPart.slice(1);
+  } catch (e) {
+    return '';
+  }
 }
 
 export default function LinkCard({ link, onEdit }: LinkCardProps) {
@@ -50,7 +78,7 @@ export default function LinkCard({ link, onEdit }: LinkCardProps) {
   
   const onEditClick = () => onEdit(link);
 
-  const domain = getDomain(link.url);
+  const brandName = getBrandName(link.url);
   
   const tagColorMap = useMemo(() => 
     new Map(managedTags.map(t => [t.name, t.color]))
@@ -75,7 +103,7 @@ export default function LinkCard({ link, onEdit }: LinkCardProps) {
             <CardTitle className="text-base font-medium leading-tight line-clamp-2 mb-1 cursor-pointer" onClick={openLink}>
                 {link.title}
             </CardTitle>
-            <p className="text-sm text-muted-foreground truncate">{domain}</p>
+            <p className="text-sm text-muted-foreground truncate">{brandName}</p>
              {link.description && (
               <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{link.description}</p>
             )}
