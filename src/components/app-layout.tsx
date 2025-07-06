@@ -247,6 +247,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       <SidebarMenuButton 
                         isActive={activeFilter.type === 'all'}
                         onClick={() => setActiveFilter({ type: 'all', value: null })}
+                        tooltip="All"
                       >
                         <FolderIcon /><span>All</span>
                       </SidebarMenuButton>
@@ -256,6 +257,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       <SidebarMenuButton 
                         isActive={activeFilter.type === 'folder' && activeFilter.value === folder.id}
                         onClick={() => setActiveFilter({ type: 'folder', value: folder.id })}
+                        tooltip={folder.name}
                       >
                         <FolderIcon style={{ color: folder.color }} /><span>{folder.name}</span>
                       </SidebarMenuButton>
@@ -337,6 +339,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       <SidebarMenuButton
                         isActive={activeFilter.type === 'tag' && activeFilter.value === tag.name}
                         onClick={() => setActiveFilter({ type: 'tag', value: tag.name })}
+                        tooltip={tag.name}
                       >
                          <Tag style={{ color: tag.color }} /><span>{tag.name}</span>
                       </SidebarMenuButton>
