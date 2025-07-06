@@ -192,7 +192,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                    <SidebarMenuButton tooltip="Notes"><MessageSquare /><span>Notes</span></SidebarMenuButton>
+                    <SidebarMenuButton 
+                      tooltip="Notes"
+                      isActive={activeFilter.type === 'notes'}
+                      onClick={() => setActiveFilter({ type: 'notes', value: null })}
+                    >
+                      <MessageSquare /><span>Notes</span>
+                    </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                     <SidebarMenuButton 

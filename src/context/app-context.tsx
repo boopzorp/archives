@@ -5,7 +5,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import type { Link, Folder, Tag, GroupByOption, SortByOption } from '@/lib/types';
 
 type ActiveFilter = {
-  type: 'all' | 'folder' | 'tag' | 'favorites' | 'graph';
+  type: 'all' | 'folder' | 'tag' | 'favorites' | 'graph' | 'notes';
   value: string | null;
 };
 

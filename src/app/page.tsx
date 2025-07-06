@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, WifiOff, Settings, Search as SearchIcon, Star } from 'lucide-react';
+import { Plus, WifiOff, Settings, Search as SearchIcon, Star, MessageSquare } from 'lucide-react';
 import { AppLayout } from '@/components/app-layout';
 import LinkCard from '@/components/link-card';
 import { GraphView } from '@/components/graph-view';
@@ -47,6 +47,8 @@ function HomePage() {
         return link.tags.includes(activeFilter.value!);
       case 'favorites':
         return link.isFavorite;
+      case 'notes':
+        return !!link.description?.trim();
       default:
         return true;
     }
@@ -122,6 +124,8 @@ function HomePage() {
         return 'Favorites';
       case 'graph':
         return 'Graph View';
+      case 'notes':
+        return 'Notes';
       default:
         return 'All';
     }
@@ -204,11 +208,13 @@ function HomePage() {
                 <div className="p-4 bg-primary/10 rounded-full mb-4">
                    {searchTerm ? <SearchIcon className="w-12 h-12 text-primary" /> : 
                     activeFilter.type === 'favorites' ? <Star className="w-12 h-12 text-primary" /> :
+                    activeFilter.type === 'notes' ? <MessageSquare className="w-12 h-12 text-primary" /> :
                     <WifiOff className="w-12 h-12 text-primary" />}
                 </div>
                 <h2 className="text-2xl font-bold font-headline mb-2">
                   {searchTerm ? 'No links found' : 
                    activeFilter.type === 'favorites' ? 'No favorites yet' :
+                   activeFilter.type === 'notes' ? 'No notes yet' :
                    activeFilter.type !== 'all' ? 'No links found' :
                    "It's quiet in here..."}
                 </h2>
@@ -217,6 +223,8 @@ function HomePage() {
                     ? `Your search for "${searchTerm}" did not match any links.` 
                     : activeFilter.type === 'favorites'
                     ? 'Click the star on a link to add it to your favorites.'
+                    : activeFilter.type === 'notes'
+                    ? 'Links with notes will appear here. Add a description to a link to create a note.'
                     : activeFilter.type !== 'all' 
                     ? 'There are no links in this view.'
                     : 'Your saved links will appear here. Get started by adding your first link.'
