@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import type { Link, Folder } from '@/lib/types';
+import type { Link, Folder, Tag } from '@/lib/types';
 
 type ActiveFilter = {
   type: 'all' | 'folder' | 'tag' | 'favorites' | 'graph';
@@ -14,13 +14,16 @@ interface AppContextState {
   setSearchTerm: (term: string) => void;
   links: Link[];
   folders: Folder[];
-  tags: string[];
+  tags: Tag[];
   addLink: (newLink: Omit<Link, 'id' | 'createdAt' | 'isFavorite' | 'folderId'>) => void;
   deleteLink: (id: string) => void;
   updateLink: (id: string, updates: Partial<Omit<Link, 'id'>>) => void;
   addFolder: (name: string) => void;
   deleteFolder: (id: string) => void;
   updateFolder: (id: string, updates: Partial<Omit<Folder, 'id'>>) => void;
+  renameTag: (oldName: string, newName: string) => void;
+  deleteTag: (name: string) => void;
+  updateTag: (name: string, updates: Partial<Omit<Tag, 'name'>>) => void;
   activeFilter: ActiveFilter;
   setActiveFilter: (filter: ActiveFilter) => void;
 }
@@ -32,20 +35,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [links, setLinks] = useState<Link[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
-  const [tags, setTags] = useState<string[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>({ type: 'all', value: null });
 
   useEffect(() => {
     setIsClient(true);
     try {
       const storedLinks = localStorage.getItem('linksort_links');
-      if (storedLinks) {
-        setLinks(JSON.parse(storedLinks));
-      }
+      if (storedLinks) setLinks(JSON.parse(storedLinks));
+      
       const storedFolders = localStorage.getItem('linksort_folders');
-      if (storedFolders) {
-        setFolders(JSON.parse(storedFolders));
-      }
+      if (storedFolders) setFolders(JSON.parse(storedFolders));
+
+      const storedTags = localStorage.getItem('linksort_tags');
+      if (storedTags) setTags(JSON.parse(storedTags));
     } catch (error) {
       console.error("Failed to parse data from localStorage", error);
     }
@@ -73,15 +76,50 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (isClient) {
-      const allTags = new Set<string>();
+      try {
+        localStorage.setItem('linksort_tags', JSON.stringify(tags));
+      } catch (error) {
+        console.error("Failed to save tags to localStorage", error);
+      }
+    }
+  }, [tags, isClient]);
+  
+  useEffect(() => {
+    if (isClient) {
+      // Get all unique tag names from links
+      const allTagNamesInLinks = new Set<string>();
       links.forEach(link => {
-        if (link.tags) {
-            link.tags.forEach(tag => allTags.add(tag));
-        }
+        link.tags?.forEach(tag => allTagNamesInLinks.add(tag));
       });
-      setTags(Array.from(allTags).sort());
+
+      // Reconcile the managed tags state
+      setTags(prevTags => {
+        const tagMap = new Map(prevTags.map(t => [t.name, t]));
+        
+        // Add any new tags found in links
+        allTagNamesInLinks.forEach(name => {
+          if (!tagMap.has(name)) {
+            tagMap.set(name, { name, color: undefined });
+          }
+        });
+
+        // Create a new array, filtering out tags that are no longer in any link
+        const newTags: Tag[] = [];
+        tagMap.forEach((tag, name) => {
+          if (allTagNamesInLinks.has(name)) {
+            newTags.push(tag);
+          }
+        });
+
+        // Only update state if there's a change in length or content
+        if (newTags.length !== prevTags.length || !newTags.every((v, i) => v === prevTags[i])) {
+            return newTags.sort((a, b) => a.name.localeCompare(b.name));
+        }
+        return prevTags;
+      });
     }
   }, [links, isClient]);
+
 
   const addLink = (newLink: Omit<Link, 'id' | 'createdAt' | 'isFavorite' | 'folderId'>) => {
     const linkWithMeta: Link = {
@@ -116,13 +154,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   
   const deleteFolder = (id: string) => {
     setFolders(prevFolders => prevFolders.filter(folder => folder.id !== id));
-    // Un-assign links from the deleted folder
     setLinks(prevLinks =>
       prevLinks.map(link =>
         link.folderId === id ? { ...link, folderId: null } : link
       )
     );
-    // If the active filter was this folder, reset to 'all'
     if (activeFilter.type === 'folder' && activeFilter.value === id) {
       setActiveFilter({ type: 'all', value: null });
     }
@@ -133,6 +169,45 @@ export function AppProvider({ children }: { children: ReactNode }) {
       prevFolders.map(folder =>
         folder.id === id ? { ...folder, ...updates } : folder
       )
+    );
+  };
+  
+  const renameTag = (oldName: string, newName: string) => {
+    if (tags.some(t => t.name === newName)) {
+      console.error(`Tag "${newName}" already exists.`);
+      // In a real app, you'd show a toast notification here.
+      return;
+    }
+    setTags(prevTags =>
+      prevTags.map(tag => (tag.name === oldName ? { ...tag, name: newName } : tag))
+    );
+    setLinks(prevLinks =>
+      prevLinks.map(link => ({
+        ...link,
+        tags: link.tags.map(t => (t === oldName ? newName : t)),
+      }))
+    );
+    if (activeFilter.type === 'tag' && activeFilter.value === oldName) {
+      setActiveFilter({ type: 'tag', value: newName });
+    }
+  };
+
+  const deleteTag = (name: string) => {
+    setTags(prevTags => prevTags.filter(tag => tag.name !== name));
+    setLinks(prevLinks =>
+      prevLinks.map(link => ({
+        ...link,
+        tags: link.tags.filter(t => t !== name),
+      }))
+    );
+    if (activeFilter.type === 'tag' && activeFilter.value === name) {
+      setActiveFilter({ type: 'all', value: null });
+    }
+  };
+  
+  const updateTag = (name: string, updates: Partial<Omit<Tag, 'name'>>) => {
+    setTags(prevTags =>
+      prevTags.map(tag => (tag.name === name ? { ...tag, ...updates } : tag))
     );
   };
 
@@ -148,6 +223,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addFolder,
     deleteFolder,
     updateFolder,
+    renameTag,
+    deleteTag,
+    updateTag,
     activeFilter,
     setActiveFilter,
   };

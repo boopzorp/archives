@@ -11,20 +11,35 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Label } from './ui/label';
 import { useAppContext } from '@/context/app-context';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from './ui/dropdown-menu';
-import type { Folder } from '@/lib/types';
+import type { Folder, Tag as TagType } from '@/lib/types';
 
-const folderColors = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#4ade80', '#38bdf8', '#818cf8', '#c084fc', '#f472b6'];
+const paletteColors = [
+  '#fca5a5', '#fdba74', '#fde047', '#bef264', '#86efac', '#67e8f9', 
+  '#a5b4fc', '#d8b4fe', '#f9a8d4', '#fda4af', '#fb923c', '#facc15',
+  '#a3e635', '#4ade80', '#38bdf8', '#818cf8', '#c084fc', '#f472b6'
+];
+
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
-  const { searchTerm, setSearchTerm, folders, addFolder, tags, activeFilter, setActiveFilter, updateFolder, deleteFolder } = useAppContext();
+  const { 
+    searchTerm, setSearchTerm, 
+    folders, addFolder, updateFolder, deleteFolder,
+    tags, renameTag, updateTag, deleteTag,
+    activeFilter, setActiveFilter,
+  } = useAppContext();
   
+  // Folder states
   const [newFolderName, setNewFolderName] = useState('');
   const [isFolderDialogOpen, setIsFolderDialogOpen] = useState(false);
-  
   const [folderToRename, setFolderToRename] = useState<Folder | null>(null);
   const [renamedFolderName, setRenamedFolderName] = useState('');
-
   const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
+
+  // Tag states
+  const [tagToRename, setTagToRename] = useState<TagType | null>(null);
+  const [renamedTagName, setRenamedTagName] = useState('');
+  const [tagToDelete, setTagToDelete] = useState<TagType | null>(null);
+
 
   const handleAddFolder = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,40 +50,60 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     }
   };
   
-  const handleOpenRenameDialog = (folder: Folder) => {
-    setFolderToRename(folder);
-    setRenamedFolderName(folder.name);
+  const handleOpenRenameDialog = (item: Folder | TagType, type: 'folder' | 'tag') => {
+    if (type === 'folder') {
+      setFolderToRename(item as Folder);
+      setRenamedFolderName(item.name);
+    } else {
+      setTagToRename(item as TagType);
+      setRenamedTagName(item.name);
+    }
   };
 
-  const handleRenameFolder = (e: React.FormEvent) => {
+  const handleRenameItem = (e: React.FormEvent) => {
     e.preventDefault();
     if (folderToRename && renamedFolderName.trim()) {
       updateFolder(folderToRename.id, { name: renamedFolderName.trim() });
       setFolderToRename(null);
       setRenamedFolderName('');
+    } else if (tagToRename && renamedTagName.trim()) {
+      renameTag(tagToRename.name, renamedTagName.trim());
+      setTagToRename(null);
+      setRenamedTagName('');
     }
   };
 
-  const handleOpenDeleteAlert = (folder: Folder) => {
-    setFolderToDelete(folder);
+  const handleOpenDeleteAlert = (item: Folder | TagType, type: 'folder' | 'tag') => {
+    if (type === 'folder') {
+      setFolderToDelete(item as Folder);
+    } else {
+      setTagToDelete(item as TagType);
+    }
   };
 
-  const handleDeleteFolder = () => {
+  const handleDeleteItem = () => {
     if (folderToDelete) {
       deleteFolder(folderToDelete.id);
       setFolderToDelete(null);
+    } else if (tagToDelete) {
+      deleteTag(tagToDelete.name);
+      setTagToDelete(null);
     }
   };
 
-  const handleSetFolderColor = (folderId: string, color: string) => {
-    updateFolder(folderId, { color });
+  const handleSetItemColor = (id: string, color: string, type: 'folder' | 'tag') => {
+    if (type === 'folder') {
+      updateFolder(id, { color });
+    } else {
+      updateTag(id, { color });
+    }
   };
 
   return (
     <SidebarProvider>
         <Sidebar collapsible="icon" className="bg-card border-r">
           <SidebarHeader className='p-4'>
-            <h1 className="text-2xl font-bold text-primary tracking-tighter">Linksort</h1>
+            <h1 className="text-2xl font-bold text-primary tracking-tighter">Linkflow</h1>
           </SidebarHeader>
           <SidebarContent className="p-2">
             <SidebarGroup>
@@ -140,30 +175,30 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                           <SidebarMenuAction><MoreHorizontal /></SidebarMenuAction>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" side="right">
-                          <DropdownMenuItem onSelect={() => handleOpenRenameDialog(folder)}>
+                          <DropdownMenuItem onSelect={() => handleOpenRenameDialog(folder, 'folder')}>
                             Rename
                           </DropdownMenuItem>
                           <DropdownMenuSub>
                             <DropdownMenuSubTrigger>Color</DropdownMenuSubTrigger>
                             <DropdownMenuSubContent>
-                              <div className="p-2 grid grid-cols-5 gap-2">
-                                {folderColors.map(color => (
+                              <div className="p-2 grid grid-cols-6 gap-2">
+                                {paletteColors.map(color => (
                                   <button
                                     key={color}
                                     className="w-5 h-5 rounded-full border"
                                     style={{ backgroundColor: color }}
-                                    onClick={() => handleSetFolderColor(folder.id, color)}
+                                    onClick={() => handleSetItemColor(folder.id, color, 'folder')}
                                   />
                                 ))}
                                 <button
                                   className="w-5 h-5 rounded-full border bg-muted"
-                                  onClick={() => handleSetFolderColor(folder.id, '')}
+                                  onClick={() => handleSetItemColor(folder.id, '', 'folder')}
                                 />
                               </div>
                             </DropdownMenuSubContent>
                           </DropdownMenuSub>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onSelect={() => handleOpenDeleteAlert(folder)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                          <DropdownMenuItem onSelect={() => handleOpenDeleteAlert(folder, 'folder')} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
                             Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -209,13 +244,46 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </SidebarGroupLabel>
               <SidebarMenu>
                   {tags.map((tag) => (
-                    <SidebarMenuItem key={tag}>
+                    <SidebarMenuItem key={tag.name}>
                       <SidebarMenuButton
-                        isActive={activeFilter.type === 'tag' && activeFilter.value === tag}
-                        onClick={() => setActiveFilter({ type: 'tag', value: tag })}
+                        isActive={activeFilter.type === 'tag' && activeFilter.value === tag.name}
+                        onClick={() => setActiveFilter({ type: 'tag', value: tag.name })}
                       >
-                        <Tag /><span>{tag}</span>
+                         <Tag style={{ color: tag.color }} /><span>{tag.name}</span>
                       </SidebarMenuButton>
+                       <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <SidebarMenuAction><MoreHorizontal /></SidebarMenuAction>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" side="right">
+                          <DropdownMenuItem onSelect={() => handleOpenRenameDialog(tag, 'tag')}>
+                            Rename
+                          </DropdownMenuItem>
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>Color</DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent>
+                               <div className="p-2 grid grid-cols-6 gap-2">
+                                {paletteColors.map(color => (
+                                  <button
+                                    key={color}
+                                    className="w-5 h-5 rounded-full border"
+                                    style={{ backgroundColor: color }}
+                                    onClick={() => handleSetItemColor(tag.name, color, 'tag')}
+                                  />
+                                ))}
+                                <button
+                                  className="w-5 h-5 rounded-full border bg-muted"
+                                  onClick={() => handleSetItemColor(tag.name, '', 'tag')}
+                                />
+                              </div>
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onSelect={() => handleOpenDeleteAlert(tag, 'tag')} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </SidebarMenuItem>
                   ))}
               </SidebarMenu>
@@ -225,11 +293,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarInset>
           {children}
 
-          <Dialog open={!!folderToRename} onOpenChange={(open) => !open && setFolderToRename(null)}>
+          <Dialog open={!!folderToRename || !!tagToRename} onOpenChange={(open) => { if (!open) { setFolderToRename(null); setTagToRename(null); } }}>
             <DialogContent className="sm:max-w-[425px]">
-              <form onSubmit={handleRenameFolder}>
+              <form onSubmit={handleRenameItem}>
                 <DialogHeader>
-                  <DialogTitle>Rename Folder</DialogTitle>
+                  <DialogTitle>Rename {folderToRename ? 'Folder' : 'Tag'}</DialogTitle>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -238,8 +306,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </Label>
                     <Input
                       id="rename-name"
-                      value={renamedFolderName}
-                      onChange={(e) => setRenamedFolderName(e.target.value)}
+                      value={folderToRename ? renamedFolderName : renamedTagName}
+                      onChange={(e) => folderToRename ? setRenamedFolderName(e.target.value) : setRenamedTagName(e.target.value)}
                       className="col-span-3"
                       autoFocus
                     />
@@ -252,17 +320,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </DialogContent>
           </Dialog>
 
-          <AlertDialog open={!!folderToDelete} onOpenChange={(open) => !open && setFolderToDelete(null)}>
+          <AlertDialog open={!!folderToDelete || !!tagToDelete} onOpenChange={(open) => { if (!open) { setFolderToDelete(null); setTagToDelete(null); } }}>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will permanently delete the "{folderToDelete?.name}" folder. Any links inside will not be deleted but will be moved out of the folder. This action cannot be undone.
+                  {folderToDelete 
+                    ? `This will permanently delete the "${folderToDelete?.name}" folder. Any links inside will not be deleted but will be moved out of the folder. This action cannot be undone.`
+                    : `This will permanently delete the "${tagToDelete?.name}" tag from all links. This action cannot be undone.`}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteFolder} className="bg-destructive hover:bg-destructive/90">
+                <AlertDialogAction onClick={handleDeleteItem} className="bg-destructive hover:bg-destructive/90">
                   Delete
                 </AlertDialogAction>
               </AlertDialogFooter>

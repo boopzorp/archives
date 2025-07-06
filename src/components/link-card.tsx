@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import type { Link } from "@/lib/types";
 import { cn } from '@/lib/utils';
 import { useAppContext } from '@/context/app-context';
+import { useMemo } from 'react';
 
 interface LinkCardProps {
   link: Link;
@@ -33,7 +34,7 @@ function getDomain(url: string) {
 }
 
 export default function LinkCard({ link }: LinkCardProps) {
-  const { folders, updateLink, deleteLink } = useAppContext();
+  const { folders, tags: managedTags, updateLink, deleteLink } = useAppContext();
 
   const openLink = () => {
     window.open(link.url, '_blank', 'noopener,noreferrer');
@@ -48,6 +49,10 @@ export default function LinkCard({ link }: LinkCardProps) {
   };
 
   const domain = getDomain(link.url);
+  
+  const tagColorMap = useMemo(() => 
+    new Map(managedTags.map(t => [t.name, t.color]))
+  , [managedTags]);
 
   return (
     <Card className="flex flex-col h-full group overflow-hidden bg-card border rounded-lg hover:shadow-lg transition-shadow duration-300">
@@ -67,9 +72,19 @@ export default function LinkCard({ link }: LinkCardProps) {
             <p className="text-sm text-muted-foreground truncate">{domain}</p>
             {link.tags && link.tags.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1">
-                {link.tags.slice(0, 3).map(tag => (
-                  <Badge key={tag} variant="secondary" className="font-normal">{tag}</Badge>
-                ))}
+                {link.tags.slice(0, 3).map(tag => {
+                  const color = tagColorMap.get(tag);
+                  return (
+                    <Badge 
+                      key={tag} 
+                      variant="secondary" 
+                      className="font-normal"
+                      style={color ? { backgroundColor: color, color: 'hsl(var(--secondary-foreground))' } : {}}
+                    >
+                      {tag}
+                    </Badge>
+                  )
+                })}
               </div>
             )}
         </CardContent>

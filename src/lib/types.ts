@@ -15,3 +15,8 @@ export interface Folder {
   name: string;
   color?: string;
 }
+
+export interface Tag {
+  name: string;
+  color?: string;
+}

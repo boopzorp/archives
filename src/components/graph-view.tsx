@@ -24,8 +24,7 @@ interface GraphLink extends LinkObject {
   target: string;
 }
 
-// Helper function to generate a consistent color from a string
-const tagToColor = (tag: string) => {
+const tagToHslColor = (tag: string) => {
   let hash = 0;
   if (tag.length === 0) return 'hsl(0, 0%, 80%)';
   for (let i = 0; i < tag.length; i++) {
@@ -37,7 +36,7 @@ const tagToColor = (tag: string) => {
 };
 
 export function GraphView() {
-  const { links } = useAppContext();
+  const { links, tags: managedTags } = useAppContext();
   const [isClient, setIsClient] = useState(false);
   const [container, setContainer] = useState<{width: number, height: number} | null>(null);
   const fgRef = useRef<ForceGraphInstance>();
@@ -55,6 +54,10 @@ export function GraphView() {
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  const tagColorMap = useMemo(() => 
+    new Map(managedTags.map(t => [t.name, t.color || tagToHslColor(t.name)]))
+  , [managedTags]);
 
   const { graphData, nodeMap } = useMemo(() => {
     if (!isClient) return { graphData: { nodes: [], links: [] }, nodeMap: new Map() };
@@ -130,15 +133,24 @@ export function GraphView() {
           nodeColor={node => {
             const gNode = node as GraphNode;
             if (gNode.type === 'tag') {
-              return tagToColor(gNode.id);
+              return tagColorMap.get(gNode.id) || '#cccccc';
             }
             return 'hsl(var(--muted-foreground))';
           }}
           linkColor={link => {
             const targetNode = nodeMap.get(link.target as string);
             if (targetNode && targetNode.type === 'tag') {
-              const color = tagToColor(targetNode.id);
-              return color.replace(')', ', 0.3)').replace('hsl', 'hsla');
+              const color = tagColorMap.get(targetNode.id);
+              if (color) {
+                // Convert hex to rgba for transparency
+                 if (color.startsWith('#')) {
+                    const r = parseInt(color.slice(1, 3), 16);
+                    const g = parseInt(color.slice(3, 5), 16);
+                    const b = parseInt(color.slice(5, 7), 16);
+                    return `rgba(${r}, ${g}, ${b}, 0.3)`;
+                }
+                return color;
+              }
             }
             return 'rgba(128, 128, 128, 0.2)';
           }}
