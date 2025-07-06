@@ -12,6 +12,7 @@ import { Label } from './ui/label';
 import { useAppContext } from '@/context/app-context';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from './ui/dropdown-menu';
 import type { Folder, Tag as TagType, GroupByOption, SortByOption } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 const paletteColors = [
   '#fca5a5', '#fdba74', '#fde047', '#bef264', '#86efac', '#67e8f9', 
@@ -131,11 +132,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <h1 className="text-2xl font-bold text-primary tracking-tighter group-data-[state=collapsed]:hidden">Archives</h1>
             <SidebarTrigger className="hidden md:flex" />
           </SidebarHeader>
-          <SidebarContent className="p-2">
+          <SidebarContent>
             <SidebarGroup>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <div className="relative w-full">
+                  <div className="relative w-full group-data-[state=collapsed]:hidden">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
                       placeholder="Search" 
@@ -143,6 +144,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
+                  </div>
+                  <div className="hidden group-data-[state=collapsed]:block">
+                    <SidebarMenuButton tooltip="Search" className="w-full">
+                      <Search />
+                    </SidebarMenuButton>
                   </div>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
