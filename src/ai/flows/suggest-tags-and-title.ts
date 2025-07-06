@@ -19,7 +19,7 @@ const SuggestTagsAndTitleOutputSchema = z.object({
   title: z.string().optional().describe('The title of the article. If no title can be found, this can be omitted.'),
   description: z.string().optional().describe('A one or two sentence summary of the page content.'),
   tags: z.array(z.string()).optional().describe('An array of suggested tags for the link.'),
-  imageUrl: z.string().url().optional().describe('A URL for a preview image for the link, preferably an Open Graph image.'),
+  imageUrl: z.string().optional().describe('A URL for a preview image for the link, preferably an Open Graph image.'),
 });
 export type SuggestTagsAndTitleOutput = z.infer<typeof SuggestTagsAndTitleOutputSchema>;
 

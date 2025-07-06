@@ -1,5 +1,4 @@
 
-import Image from 'next/image';
 import { MoreHorizontal, Trash2, Folder, Star, Pencil } from "lucide-react";
 
 import { Card, CardContent, CardFooter, CardTitle } from "@/components/ui/card";
@@ -60,12 +59,16 @@ export default function LinkCard({ link, onEdit }: LinkCardProps) {
   return (
     <Card className="flex flex-col h-full group overflow-hidden bg-card border rounded-lg hover:shadow-lg transition-shadow duration-300">
         <div className="relative aspect-video w-full overflow-hidden cursor-pointer bg-muted" onClick={openLink}>
-            <Image
+            <img
                 src={link.imageUrl || `https://placehold.co/600x400.png`}
                 alt={link.title}
-                fill
-                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                className="absolute h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                 data-ai-hint="abstract background"
+                onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.onerror = null; // prevents looping
+                    target.src = 'https://placehold.co/600x400.png';
+                }}
             />
         </div>
         <CardContent className="p-4 flex-grow">
