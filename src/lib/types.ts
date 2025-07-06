@@ -13,4 +13,5 @@ export interface Link {
 export interface Folder {
   id: string;
   name: string;
+  color?: string;
 }

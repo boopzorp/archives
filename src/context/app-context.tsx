@@ -19,6 +19,8 @@ interface AppContextState {
   deleteLink: (id: string) => void;
   updateLink: (id: string, updates: Partial<Omit<Link, 'id'>>) => void;
   addFolder: (name: string) => void;
+  deleteFolder: (id: string) => void;
+  updateFolder: (id: string, updates: Partial<Omit<Folder, 'id'>>) => void;
   activeFilter: ActiveFilter;
   setActiveFilter: (filter: ActiveFilter) => void;
 }
@@ -111,7 +113,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
     setFolders(prevFolders => [...prevFolders, newFolder]);
   };
+  
+  const deleteFolder = (id: string) => {
+    setFolders(prevFolders => prevFolders.filter(folder => folder.id !== id));
+    // Un-assign links from the deleted folder
+    setLinks(prevLinks =>
+      prevLinks.map(link =>
+        link.folderId === id ? { ...link, folderId: null } : link
+      )
+    );
+    // If the active filter was this folder, reset to 'all'
+    if (activeFilter.type === 'folder' && activeFilter.value === id) {
+      setActiveFilter({ type: 'all', value: null });
+    }
+  };
 
+  const updateFolder = (id: string, updates: Partial<Omit<Folder, 'id'>>) => {
+    setFolders(prevFolders =>
+      prevFolders.map(folder =>
+        folder.id === id ? { ...folder, ...updates } : folder
+      )
+    );
+  };
 
   const value = {
     searchTerm,
@@ -123,6 +146,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     deleteLink,
     updateLink,
     addFolder,
+    deleteFolder,
+    updateFolder,
     activeFilter,
     setActiveFilter,
   };
