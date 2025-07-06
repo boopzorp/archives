@@ -12,7 +12,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { suggestTagsAndTitle } from '@/ai/flows/suggest-tags-and-title';
 import { useToast } from '@/hooks/use-toast';
-import type { Link } from '@/lib/types';
+import type { Link, SuggestTagsAndTitleOutput } from '@/lib/types';
+import { getTweetMetadata } from '@/lib/actions';
 
 const addLinkFormSchema = z.object({
   url: z.string().url({ message: "Please enter a valid URL." }),
@@ -83,7 +84,23 @@ export function AddLinkForm({ onSave, link }: LinkFormProps) {
     form.clearErrors("url");
     
     try {
-      const result = await suggestTagsAndTitle({ url });
+      const isTweet = /https?:\/\/(www\.)?(x\.com|twitter\.com)/.test(url);
+      let result: SuggestTagsAndTitleOutput | { error: string };
+
+      if (isTweet) {
+        result = await getTweetMetadata(url);
+      } else {
+        result = await suggestTagsAndTitle({ url });
+      }
+
+      if ('error' in result) {
+        toast({
+          variant: "destructive",
+          title: "Couldn't fetch details",
+          description: result.error,
+        });
+        return;
+      }
       
       const hasData = result.title || result.description || result.imageUrl || (result.tags && result.tags.length > 0);
       
