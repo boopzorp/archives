@@ -4,6 +4,11 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import type { Link, Folder } from '@/lib/types';
 
+type ActiveFilter = {
+  type: 'all' | 'folder' | 'tag' | 'favorites';
+  value: string | null;
+};
+
 interface AppContextState {
   searchTerm: string;
   setSearchTerm: (term: string) => void;
@@ -14,6 +19,8 @@ interface AppContextState {
   deleteLink: (id: string) => void;
   updateLink: (id: string, updates: Partial<Omit<Link, 'id'>>) => void;
   addFolder: (name: string) => void;
+  activeFilter: ActiveFilter;
+  setActiveFilter: (filter: ActiveFilter) => void;
 }
 
 const AppContext = createContext<AppContextState | undefined>(undefined);
@@ -24,6 +31,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [links, setLinks] = useState<Link[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [tags, setTags] = useState<string[]>([]);
+  const [activeFilter, setActiveFilter] = useState<ActiveFilter>({ type: 'all', value: null });
 
   useEffect(() => {
     setIsClient(true);
@@ -115,6 +123,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     deleteLink,
     updateLink,
     addFolder,
+    activeFilter,
+    setActiveFilter,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

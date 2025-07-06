@@ -11,7 +11,7 @@ import type { Link } from '@/lib/types';
 import { AppProvider, useAppContext } from '@/context/app-context';
 
 function HomePage() {
-  const { searchTerm, links, addLink } = useAppContext();
+  const { searchTerm, links, addLink, activeFilter, folders } = useAppContext();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   const handleAddLink = (newLink: Omit<Link, 'id' | 'createdAt' | 'isFavorite' | 'folderId'>) => {
@@ -19,13 +19,46 @@ function HomePage() {
     setIsSheetOpen(false);
   };
 
-  const filteredLinks = links.filter(link => 
-    link.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (link.description && link.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    link.url.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    link.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredBySearch = links.filter(link => {
+    if (!searchTerm) return true;
+    const lowercasedTerm = searchTerm.toLowerCase();
+    return (
+      link.title.toLowerCase().includes(lowercasedTerm) ||
+      (link.description && link.description.toLowerCase().includes(lowercasedTerm)) ||
+      link.url.toLowerCase().includes(lowercasedTerm) ||
+      link.tags.some(tag => tag.toLowerCase().includes(lowercasedTerm))
+    )
+  });
+
+  const filteredLinks = filteredBySearch.filter(link => {
+    if (activeFilter.type === 'all') {
+      return true;
+    }
+    if (activeFilter.type === 'folder') {
+      return link.folderId === activeFilter.value;
+    }
+    if (activeFilter.type === 'tag') {
+      return link.tags.includes(activeFilter.value!);
+    }
+    return true;
+  });
   
+  const getHeaderTitle = () => {
+    switch (activeFilter.type) {
+      case 'all':
+        return 'All';
+      case 'folder':
+        const folder = folders.find(f => f.id === activeFilter.value);
+        return folder ? folder.name : 'Folder';
+      case 'tag':
+        return `#${activeFilter.value}`;
+      case 'favorites':
+        return 'Favorites';
+      default:
+        return 'All';
+    }
+  };
+
   if (typeof window === 'undefined') {
      return (
       <AppLayout>
@@ -47,7 +80,7 @@ function HomePage() {
   return (
     <AppLayout>
       <header className="flex items-center justify-between p-4 border-b bg-card">
-        <h1 className="text-2xl font-bold">All</h1>
+        <h1 className="text-2xl font-bold">{getHeaderTitle()}</h1>
         <div className="flex items-center gap-2">
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
@@ -80,14 +113,16 @@ function HomePage() {
           ) : (
             <div className="flex flex-col items-center justify-center text-center py-20">
               <div className="p-4 bg-primary/10 rounded-full mb-4">
-                 {searchTerm ? <SearchIcon className="w-12 h-12 text-primary" /> : <WifiOff className="w-12 h-12 text-primary" />}
+                 {searchTerm || activeFilter.type !== 'all' ? <SearchIcon className="w-12 h-12 text-primary" /> : <WifiOff className="w-12 h-12 text-primary" />}
               </div>
               <h2 className="text-2xl font-bold font-headline mb-2">
-                {searchTerm ? 'No links found' : "It's quiet in here..."}
+                {searchTerm || activeFilter.type !== 'all' ? 'No links found' : "It's quiet in here..."}
               </h2>
               <p className="text-muted-foreground max-w-sm">
                 {searchTerm 
                   ? `Your search for "${searchTerm}" did not match any links.` 
+                  : activeFilter.type !== 'all' 
+                  ? 'There are no links in this view.'
                   : 'Your saved links will appear here. Get started by adding your first link.'
                 }
               </p>

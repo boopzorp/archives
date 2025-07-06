@@ -11,7 +11,7 @@ import { Label } from './ui/label';
 import { useAppContext } from '@/context/app-context';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
-  const { searchTerm, setSearchTerm, folders, addFolder, tags } = useAppContext();
+  const { searchTerm, setSearchTerm, folders, addFolder, tags, activeFilter, setActiveFilter } = useAppContext();
   const [newFolderName, setNewFolderName] = useState('');
   const [isFolderDialogOpen, setIsFolderDialogOpen] = useState(false);
 
@@ -68,11 +68,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </SidebarGroupLabel>
               <SidebarMenu>
                   <SidebarMenuItem>
-                      <SidebarMenuButton isActive={true}><FolderIcon /><span>All</span></SidebarMenuButton>
+                      <SidebarMenuButton 
+                        isActive={activeFilter.type === 'all'}
+                        onClick={() => setActiveFilter({ type: 'all', value: null })}
+                      >
+                        <FolderIcon /><span>All</span>
+                      </SidebarMenuButton>
                   </SidebarMenuItem>
                   {folders.map((folder) => (
                     <SidebarMenuItem key={folder.id}>
-                      <SidebarMenuButton><FolderIcon /><span>{folder.name}</span></SidebarMenuButton>
+                      <SidebarMenuButton 
+                        isActive={activeFilter.type === 'folder' && activeFilter.value === folder.id}
+                        onClick={() => setActiveFilter({ type: 'folder', value: folder.id })}
+                      >
+                        <FolderIcon /><span>{folder.name}</span>
+                      </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
                   <SidebarMenuItem>
@@ -115,7 +125,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <SidebarMenu>
                   {tags.map((tag) => (
                     <SidebarMenuItem key={tag}>
-                      <SidebarMenuButton><Tag /><span>{tag}</span></SidebarMenuButton>
+                      <SidebarMenuButton
+                        isActive={activeFilter.type === 'tag' && activeFilter.value === tag}
+                        onClick={() => setActiveFilter({ type: 'tag', value: tag })}
+                      >
+                        <Tag /><span>{tag}</span>
+                      </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
               </SidebarMenu>
