@@ -36,9 +36,6 @@ const prompt = ai.definePrompt({
 
 When analyzing the page, focus on the primary content. Ignore headers, footers, navigation bars, and comment sections if possible.
 
-**General Instructions:**
-- For a project showcase page like on Behance or Dribbble, the title is the project title, and tags should relate to the project's subject, style, and industry.
-
 Analyze the content of the following URL: {{media url=url}}
 
 Based on your analysis, provide the following information if available:

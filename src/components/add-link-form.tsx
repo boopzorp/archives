@@ -10,10 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { suggestTagsAndTitle } from '@/ai/flows/suggest-tags-and-title';
 import { useToast } from '@/hooks/use-toast';
 import type { Link, SuggestTagsAndTitleOutput } from '@/lib/types';
-import { getTweetMetadata } from '@/lib/actions';
+import { getTweetMetadata, getGenericMetadata } from '@/lib/actions';
 
 const addLinkFormSchema = z.object({
   url: z.string().url({ message: "Please enter a valid URL." }),
@@ -90,7 +89,7 @@ export function AddLinkForm({ onSave, link }: LinkFormProps) {
       if (isTweet) {
         result = await getTweetMetadata(url);
       } else {
-        result = await suggestTagsAndTitle({ url });
+        result = await getGenericMetadata(url);
       }
 
       if ('error' in result) {
