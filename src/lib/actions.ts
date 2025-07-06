@@ -11,7 +11,20 @@ export async function getLinkMetadata(url: string): Promise<SuggestTagsAndTitleO
   }
 
   try {
-    const response = await fetch(url, {
+    let effectiveUrl = url;
+    let isTweet = false;
+    try {
+        const urlObj = new URL(url);
+        if (urlObj.hostname === 'x.com' || urlObj.hostname === 'twitter.com') {
+            urlObj.hostname = 'fxtwitter.com';
+            effectiveUrl = urlObj.toString();
+            isTweet = true;
+        }
+    } catch (e) {
+        // If URL parsing fails, proceed with the original URL
+    }
+
+    const response = await fetch(effectiveUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         'Accept': 'text/html',
@@ -33,9 +46,17 @@ export async function getLinkMetadata(url: string): Promise<SuggestTagsAndTitleO
       );
     };
 
-    const title = getMetaTag('title') || $('title').text() || '';
-    const description = getMetaTag('description') || '';
+    let title = getMetaTag('title') || $('title').text() || '';
+    let description = getMetaTag('description') || '';
     let imageUrl = getMetaTag('image');
+
+    if (isTweet) {
+        const tweetAuthor = title.replace(' on X', '').replace(' on Twitter', '');
+        const tweetContent = description;
+        
+        title = tweetContent || `Tweet from ${tweetAuthor}`;
+        description = tweetContent ? `Tweet from ${tweetAuthor}` : '';
+    }
 
     if (imageUrl) {
       try {
