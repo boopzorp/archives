@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import {
-  ArrowDownUp, BarChart2, ChevronDown, Folder as FolderIcon, MessageSquare, Plus, Search, Star, Tag, MoreHorizontal,
+  ArrowDown, ArrowDownAZ, ArrowUp, ArrowUpAZ, BarChart2, ChevronDown, Folder as FolderIcon, MessageSquare, Plus, Search, Star, Tag, MoreHorizontal,
 } from 'lucide-react';
 import { Sidebar, SidebarProvider, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuAction } from '@/components/ui/sidebar';
 import { Input } from './ui/input';
@@ -11,7 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Label } from './ui/label';
 import { useAppContext } from '@/context/app-context';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from './ui/dropdown-menu';
-import type { Folder, Tag as TagType, GroupByOption } from '@/lib/types';
+import type { Folder, Tag as TagType, GroupByOption, SortByOption } from '@/lib/types';
 
 const paletteColors = [
   '#fca5a5', '#fdba74', '#fde047', '#bef264', '#86efac', '#67e8f9', 
@@ -27,6 +27,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     tags, renameTag, updateTag, deleteTag,
     activeFilter, setActiveFilter,
     groupBy, setGroupBy,
+    sortBy, setSortBy,
   } = useAppContext();
   
   // Folder states
@@ -109,6 +110,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     return `Group by ${capitalized}`;
   }
 
+  const handleSortByChange = (value: string) => {
+    setSortBy(value as SortByOption);
+  }
+
+  const sortOptions: { [key in SortByOption]: { label: string; icon: React.ElementType } } = {
+    'newest': { label: 'Newest first', icon: ArrowDown },
+    'oldest': { label: 'Oldest first', icon: ArrowUp },
+    'title-asc': { label: 'Title (A-Z)', icon: ArrowDownAZ },
+    'title-desc': { label: 'Title (Z-A)', icon: ArrowUpAZ },
+  };
+
+  const currentSortOption = sortOptions[sortBy];
+  const CurrentSortIcon = currentSortOption.icon;
+
   return (
     <SidebarProvider>
         <Sidebar collapsible="icon" className="bg-card border-r">
@@ -130,7 +145,24 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   </div>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                    <SidebarMenuButton tooltip="Sort by newest first"><ArrowDownUp /><span>Sort by newest first</span></SidebarMenuButton>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <SidebarMenuButton tooltip={`Sort by ${currentSortOption.label}`}>
+                        <CurrentSortIcon />
+                        <span>Sort by {currentSortOption.label}</span>
+                      </SidebarMenuButton>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuLabel>Sort By</DropdownMenuLabel>
+                      <DropdownMenuRadioGroup value={sortBy} onValueChange={handleSortByChange}>
+                        {Object.entries(sortOptions).map(([value, { label }]) => (
+                          <DropdownMenuRadioItem key={value} value={value}>
+                            {label}
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <DropdownMenu>

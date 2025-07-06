@@ -22,3 +22,5 @@ export interface Tag {
 }
 
 export type GroupByOption = 'none' | 'day' | 'month' | 'year';
+
+export type SortByOption = 'newest' | 'oldest' | 'title-asc' | 'title-desc';

@@ -13,7 +13,7 @@ import { AppProvider, useAppContext } from '@/context/app-context';
 import { format, isToday, isYesterday, parseISO } from 'date-fns';
 
 function HomePage() {
-  const { searchTerm, links, addLink, activeFilter, folders, groupBy } = useAppContext();
+  const { searchTerm, links, addLink, activeFilter, folders, groupBy, sortBy } = useAppContext();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -52,15 +52,36 @@ function HomePage() {
     }
   }), [filteredBySearch, activeFilter]);
   
+  const sortedLinks = useMemo(() => {
+    const sorted = [...filteredLinks];
+    switch (sortBy) {
+      case 'newest':
+        sorted.sort((a, b) => parseISO(b.createdAt).getTime() - parseISO(a.createdAt).getTime());
+        break;
+      case 'oldest':
+        sorted.sort((a, b) => parseISO(a.createdAt).getTime() - parseISO(b.createdAt).getTime());
+        break;
+      case 'title-asc':
+        sorted.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case 'title-desc':
+        sorted.sort((a, b) => b.title.localeCompare(a.title));
+        break;
+      default:
+        break;
+    }
+    return sorted;
+  }, [filteredLinks, sortBy]);
+
   const groupedAndFilteredLinks = useMemo(() => {
-    if (groupBy === 'none' || filteredLinks.length === 0) {
-      return [{ groupTitle: null, links: filteredLinks }];
+    if (groupBy === 'none' || sortedLinks.length === 0) {
+      return [{ groupTitle: null, links: sortedLinks }];
     }
 
     const groups: { groupTitle: string; links: Link[] }[] = [];
     const groupMap = new Map<string, Link[]>();
 
-    for (const link of filteredLinks) {
+    for (const link of sortedLinks) {
       const date = parseISO(link.createdAt);
       let groupKey = '';
 
@@ -85,7 +106,7 @@ function HomePage() {
     }
     
     return groups;
-  }, [filteredLinks, groupBy]);
+  }, [sortedLinks, groupBy]);
 
 
   const getHeaderTitle = () => {
