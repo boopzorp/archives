@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from 'react';
-import { Plus, WifiOff, Settings, Search as SearchIcon } from 'lucide-react';
+import { Plus, WifiOff, Settings, Search as SearchIcon, Star } from 'lucide-react';
 import { AppLayout } from '@/components/app-layout';
 import LinkCard from '@/components/link-card';
+import { GraphView } from '@/components/graph-view';
 import { AddLinkForm } from '@/components/add-link-form';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -31,16 +32,18 @@ function HomePage() {
   });
 
   const filteredLinks = filteredBySearch.filter(link => {
-    if (activeFilter.type === 'all') {
-      return true;
+    switch (activeFilter.type) {
+      case 'all':
+        return true;
+      case 'folder':
+        return link.folderId === activeFilter.value;
+      case 'tag':
+        return link.tags.includes(activeFilter.value!);
+      case 'favorites':
+        return link.isFavorite;
+      default:
+        return true;
     }
-    if (activeFilter.type === 'folder') {
-      return link.folderId === activeFilter.value;
-    }
-    if (activeFilter.type === 'tag') {
-      return link.tags.includes(activeFilter.value!);
-    }
-    return true;
   });
   
   const getHeaderTitle = () => {
@@ -54,6 +57,8 @@ function HomePage() {
         return `#${activeFilter.value}`;
       case 'favorites':
         return 'Favorites';
+      case 'graph':
+        return 'Graph View';
       default:
         return 'All';
     }
@@ -104,30 +109,43 @@ function HomePage() {
       </header>
 
       <main className="flex-1 p-4 md:p-8">
-          {filteredLinks.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredLinks.map((link) => (
-                <LinkCard key={link.id} link={link} />
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center text-center py-20">
-              <div className="p-4 bg-primary/10 rounded-full mb-4">
-                 {searchTerm || activeFilter.type !== 'all' ? <SearchIcon className="w-12 h-12 text-primary" /> : <WifiOff className="w-12 h-12 text-primary" />}
+        {activeFilter.type === 'graph' ? (
+          <GraphView />
+        ) : (
+          <>
+            {filteredLinks.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredLinks.map((link) => (
+                  <LinkCard key={link.id} link={link} />
+                ))}
               </div>
-              <h2 className="text-2xl font-bold font-headline mb-2">
-                {searchTerm || activeFilter.type !== 'all' ? 'No links found' : "It's quiet in here..."}
-              </h2>
-              <p className="text-muted-foreground max-w-sm">
-                {searchTerm 
-                  ? `Your search for "${searchTerm}" did not match any links.` 
-                  : activeFilter.type !== 'all' 
-                  ? 'There are no links in this view.'
-                  : 'Your saved links will appear here. Get started by adding your first link.'
-                }
-              </p>
-            </div>
-          )}
+            ) : (
+              <div className="flex flex-col items-center justify-center text-center py-20">
+                <div className="p-4 bg-primary/10 rounded-full mb-4">
+                   {searchTerm ? <SearchIcon className="w-12 h-12 text-primary" /> : 
+                    activeFilter.type === 'favorites' ? <Star className="w-12 h-12 text-primary" /> :
+                    <WifiOff className="w-12 h-12 text-primary" />}
+                </div>
+                <h2 className="text-2xl font-bold font-headline mb-2">
+                  {searchTerm ? 'No links found' : 
+                   activeFilter.type === 'favorites' ? 'No favorites yet' :
+                   activeFilter.type !== 'all' ? 'No links found' :
+                   "It's quiet in here..."}
+                </h2>
+                <p className="text-muted-foreground max-w-sm">
+                  {searchTerm 
+                    ? `Your search for "${searchTerm}" did not match any links.` 
+                    : activeFilter.type === 'favorites'
+                    ? 'Click the star on a link to add it to your favorites.'
+                    : activeFilter.type !== 'all' 
+                    ? 'There are no links in this view.'
+                    : 'Your saved links will appear here. Get started by adding your first link.'
+                  }
+                </p>
+              </div>
+            )}
+          </>
+        )}
       </main>
     </AppLayout>
   );

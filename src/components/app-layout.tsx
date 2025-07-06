@@ -51,13 +51,25 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     <SidebarMenuButton tooltip="Group by none"><FolderIcon /><span>Group by none</span></SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                    <SidebarMenuButton tooltip="Favorites"><Star /><span>Favorites</span></SidebarMenuButton>
+                    <SidebarMenuButton 
+                      tooltip="Favorites"
+                      isActive={activeFilter.type === 'favorites'}
+                      onClick={() => setActiveFilter({ type: 'favorites', value: null })}
+                    >
+                      <Star /><span>Favorites</span>
+                    </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                     <SidebarMenuButton tooltip="Notes"><MessageSquare /><span>Notes</span></SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                    <SidebarMenuButton tooltip="Graph"><BarChart2 /><span>Graph</span></SidebarMenuButton>
+                    <SidebarMenuButton 
+                      tooltip="Graph"
+                      isActive={activeFilter.type === 'graph'}
+                      onClick={() => setActiveFilter({ type: 'graph', value: null })}
+                    >
+                      <BarChart2 /><span>Graph</span>
+                    </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroup>
