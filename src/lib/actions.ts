@@ -51,11 +51,19 @@ export async function getLinkMetadata(url: string): Promise<SuggestTagsAndTitleO
     let imageUrl = getMetaTag('image');
 
     if (isTweet) {
+        // For fxtwitter, og:title is the author, and og:description is the tweet content.
         const tweetAuthor = title.replace(' on X', '').replace(' on Twitter', '');
         const tweetContent = description;
         
-        title = tweetContent || `Tweet from ${tweetAuthor}`;
-        description = tweetContent ? `Tweet from ${tweetAuthor}` : '';
+        // If the tweet has text content, use it as the title.
+        if (tweetContent) {
+            title = tweetContent;
+            description = `Tweet from ${tweetAuthor}`;
+        } else {
+            // If there's no text (e.g., just an image), use the author's name as the title.
+            title = tweetAuthor;
+            description = ''; // Keep description clean
+        }
     }
 
     if (imageUrl) {
