@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview This file contains the Genkit flow for suggesting relevant tags and identifying the article title when a user saves a new link.
@@ -19,7 +20,7 @@ const SuggestTagsAndTitleOutputSchema = z.object({
   title: z.string().optional().describe('The title of the article. If no title can be found, this can be omitted.'),
   description: z.string().optional().describe('A one or two sentence summary of the page content.'),
   tags: z.array(z.string()).optional().describe('An array of suggested tags for the link.'),
-  imageUrl: z.string().optional().describe('A URL for a preview image for the link, preferably an Open Graph image.'),
+  imageUrl: z.string().optional().describe('An absolute URL for a preview image for the link, preferably an Open Graph image.'),
 });
 export type SuggestTagsAndTitleOutput = z.infer<typeof SuggestTagsAndTitleOutputSchema>;
 
@@ -41,7 +42,7 @@ Based on your analysis, provide the following information if available:
 1.  **title**: The main title of the article or project.
 2.  **description**: A concise, one or two-sentence summary of the content.
 3.  **tags**: An array of 3 to 5 relevant keywords or tags that describe the content.
-4.  **imageUrl**: A URL for a suitable preview image. Look for the 'og:image' meta tag first. If it's not available, find another representative image from the page.
+4.  **imageUrl**: A URL for a suitable preview image. Look for the 'og:image' meta tag first. If it's not available, find another representative image from the page. The URL must be an absolute URL (it must start with http:// or https://).
 
 Your response MUST be a valid JSON object that adheres to the output schema. If you cannot determine a value for an optional field, omit it from the response. The 'tags' field MUST be a JSON array of strings if present.`,
   config: {
