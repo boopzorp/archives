@@ -5,25 +5,37 @@ import { Plus, WifiOff, Settings, Search as SearchIcon, Star, MessageSquare } fr
 import { AppLayout } from '@/components/app-layout';
 import LinkCard from '@/components/link-card';
 import { GraphView } from '@/components/graph-view';
-import { AddLinkForm } from '@/components/add-link-form';
+import { AddLinkForm, AddLinkFormValues } from '@/components/add-link-form';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { Link } from '@/lib/types';
 import { AppProvider, useAppContext } from '@/context/app-context';
 import { format, isToday, isYesterday, parseISO } from 'date-fns';
 
 function HomePage() {
-  const { searchTerm, links, addLink, activeFilter, folders, groupBy, sortBy } = useAppContext();
+  const { searchTerm, links, addLink, updateLink, activeFilter, folders, groupBy, sortBy } = useAppContext();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [linkToEdit, setLinkToEdit] = useState<Link | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  const handleAddLink = (newLink: Omit<Link, 'id' | 'createdAt' | 'isFavorite' | 'folderId'>) => {
-    addLink(newLink);
-    setIsSheetOpen(false);
+  const handleSaveLink = (formDataWithImage: AddLinkFormValues & { imageUrl?: string }, linkId?: string) => {
+    const { imageUrl, ...formData } = formDataWithImage;
+    const tagsArray = formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [];
+    
+    const linkData = { ...formData, tags: tagsArray, imageUrl };
+    
+    if (linkId) {
+      updateLink(linkId, linkData);
+      setLinkToEdit(null);
+    } else {
+      addLink(linkData);
+      setIsSheetOpen(false);
+    }
   };
 
   const filteredBySearch = useMemo(() => links.filter(link => {
@@ -173,7 +185,7 @@ function HomePage() {
               <SheetHeader>
                 <SheetTitle className="font-headline text-2xl">Add a new link</SheetTitle>
               </SheetHeader>
-              <AddLinkForm onAddLink={handleAddLink} />
+              <AddLinkForm onSave={handleSaveLink} />
             </SheetContent>
           </Sheet>
           <Button variant="outline">Give Feedback</Button>
@@ -197,7 +209,7 @@ function HomePage() {
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                       {groupLinks.map((link) => (
-                        <LinkCard key={link.id} link={link} />
+                        <LinkCard key={link.id} link={link} onEdit={setLinkToEdit} />
                       ))}
                     </div>
                   </section>
@@ -235,6 +247,15 @@ function HomePage() {
           </>
         )}
       </main>
+      
+      <Dialog open={!!linkToEdit} onOpenChange={(open) => !open && setLinkToEdit(null)}>
+        <DialogContent className="sm:max-w-lg overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Link</DialogTitle>
+          </DialogHeader>
+          <AddLinkForm link={linkToEdit} onSave={handleSaveLink} />
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

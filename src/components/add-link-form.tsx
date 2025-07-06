@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -21,16 +21,19 @@ const addLinkFormSchema = z.object({
   tags: z.string().optional(),
 });
 
-type AddLinkFormValues = z.infer<typeof addLinkFormSchema>;
+export type AddLinkFormValues = z.infer<typeof addLinkFormSchema>;
 
-interface AddLinkFormProps {
-  onAddLink: (link: Omit<Link, 'id' | 'createdAt' | 'isFavorite' | 'folderId'>) => void;
+interface LinkFormProps {
+  onSave: (data: AddLinkFormValues & { imageUrl?: string }, linkId?: string) => void;
+  link?: Link | null;
 }
 
-export function AddLinkForm({ onAddLink }: AddLinkFormProps) {
+export function AddLinkForm({ onSave, link }: LinkFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | undefined>();
   const { toast } = useToast();
+
+  const isEditMode = !!link;
 
   const form = useForm<AddLinkFormValues>({
     resolver: zodResolver(addLinkFormSchema),
@@ -41,6 +44,26 @@ export function AddLinkForm({ onAddLink }: AddLinkFormProps) {
       tags: "",
     },
   });
+
+  useEffect(() => {
+    if (link) {
+      form.reset({
+        url: link.url,
+        title: link.title,
+        description: link.description || '',
+        tags: link.tags.join(', '),
+      });
+      setImageUrl(link.imageUrl);
+    } else {
+      form.reset({
+        url: "",
+        title: "",
+        description: "",
+        tags: "",
+      });
+      setImageUrl(undefined);
+    }
+  }, [link, form]);
 
   const handleFetchMetadata = async () => {
     const url = form.getValues("url");
@@ -74,11 +97,8 @@ export function AddLinkForm({ onAddLink }: AddLinkFormProps) {
   };
 
   const onSubmit = (data: AddLinkFormValues) => {
-    const tagsArray = data.tags ? data.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [];
-    
-    onAddLink({ ...data, tags: tagsArray, imageUrl });
-    form.reset();
-    setImageUrl(undefined);
+    const dataWithImage = { ...data, imageUrl };
+    onSave(dataWithImage, link?.id);
   };
 
   return (
@@ -92,9 +112,9 @@ export function AddLinkForm({ onAddLink }: AddLinkFormProps) {
               <FormLabel>Link URL</FormLabel>
               <div className="flex gap-2">
                 <FormControl>
-                  <Input placeholder="https://your.link/here" {...field} />
+                  <Input placeholder="https://your.link/here" {...field} disabled={isEditMode} />
                 </FormControl>
-                <Button type="button" onClick={handleFetchMetadata} disabled={isLoading} variant="outline" className="shrink-0">
+                <Button type="button" onClick={handleFetchMetadata} disabled={isLoading || isEditMode} variant="outline" className="shrink-0">
                   {isLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
@@ -152,7 +172,7 @@ export function AddLinkForm({ onAddLink }: AddLinkFormProps) {
         />
 
         <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-bold">
-          Save Link
+          {isEditMode ? 'Update Link' : 'Save Link'}
         </Button>
       </form>
     </Form>

@@ -1,6 +1,6 @@
 
 import Image from 'next/image';
-import { MoreHorizontal, Trash2, Folder, Star, Eye } from "lucide-react";
+import { MoreHorizontal, Trash2, Folder, Star, Pencil } from "lucide-react";
 
 import { Card, CardContent, CardFooter, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import { useMemo } from 'react';
 
 interface LinkCardProps {
   link: Link;
+  onEdit: (link: Link) => void;
 }
 
 function getDomain(url: string) {
@@ -33,7 +34,7 @@ function getDomain(url: string) {
     }
 }
 
-export default function LinkCard({ link }: LinkCardProps) {
+export default function LinkCard({ link, onEdit }: LinkCardProps) {
   const { folders, tags: managedTags, updateLink, deleteLink } = useAppContext();
 
   const openLink = () => {
@@ -47,6 +48,8 @@ export default function LinkCard({ link }: LinkCardProps) {
   const onAssignFolder = (folderId: string | null) => {
     updateLink(link.id, { folderId });
   };
+  
+  const onEditClick = () => onEdit(link);
 
   const domain = getDomain(link.url);
   
@@ -70,6 +73,9 @@ export default function LinkCard({ link }: LinkCardProps) {
                 {link.title}
             </CardTitle>
             <p className="text-sm text-muted-foreground truncate">{domain}</p>
+             {link.description && (
+              <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{link.description}</p>
+            )}
             {link.tags && link.tags.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1">
                 {link.tags.slice(0, 3).map(tag => {
@@ -116,8 +122,8 @@ export default function LinkCard({ link }: LinkCardProps) {
             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={onToggleFavorite}>
                 <Star className={cn("h-4 w-4", link.isFavorite && "fill-current text-yellow-400")} />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                <Eye className="h-4 w-4" />
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={onEditClick}>
+                <Pencil className="h-4 w-4" />
             </Button>
         </div>
         
