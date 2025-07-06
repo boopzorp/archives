@@ -15,6 +15,8 @@ interface GraphNode extends NodeObject {
   id: string;
   name: string;
   type: 'link' | 'tag';
+  url?: string;
+  description?: string;
 }
 
 interface GraphLink extends LinkObject {
@@ -56,6 +58,8 @@ export function GraphView() {
           id: link.id,
           name: link.title,
           type: 'link',
+          url: link.url,
+          description: link.description,
         });
         nodeSet.add(link.id);
       }
@@ -92,7 +96,19 @@ export function GraphView() {
           width={container.width}
           height={container.height}
           graphData={graphData}
-          nodeLabel="name"
+          nodeLabel={node => {
+            const gNode = node as GraphNode;
+            if (gNode.type === 'link' && gNode.description) {
+              return `<b>${gNode.name}</b><br />${gNode.description}`;
+            }
+            return gNode.name;
+          }}
+          onNodeClick={node => {
+            const gNode = node as GraphNode;
+            if (gNode.type === 'link' && gNode.url) {
+              window.open(gNode.url, '_blank', 'noopener,noreferrer');
+            }
+          }}
           nodeVal={node => (node as GraphNode).type === 'tag' ? 4 : 1}
           nodeColor={node => (node as GraphNode).type === 'tag' ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))'}
           linkColor={() => 'hsl(var(--border))'}
