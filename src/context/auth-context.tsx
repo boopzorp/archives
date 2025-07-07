@@ -62,8 +62,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { currentUser } = auth;
     const { displayName, photoFile, photoURL } = updates;
     
-    const profileAuthUpdates: { displayName?: string; photoURL?: string } = {};
-    const profileDbUpdates: { username?: string; photoURL?: string } = {};
+    const profileAuthUpdates: { displayName?: string; photoURL?: string | null } = {};
+    const profileDbUpdates: { username?: string; photoURL?: string | null } = {};
     
     if (displayName && displayName !== currentUser.displayName) {
       profileAuthUpdates.displayName = displayName;
@@ -84,8 +84,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     
     if (newPhotoURL !== currentUser.photoURL) {
-      profileAuthUpdates.photoURL = newPhotoURL as string;
-      profileDbUpdates.photoURL = newPhotoURL as string;
+      profileAuthUpdates.photoURL = newPhotoURL;
+      profileDbUpdates.photoURL = newPhotoURL;
     }
     
     if (Object.keys(profileAuthUpdates).length > 0) {
@@ -97,7 +97,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await updateDoc(userDocRef, profileDbUpdates);
     }
     // The onAuthStateChanged listener will automatically pick up the changes.
-    // Manually setting state here can cause race conditions.
   };
 
   const signOut = async () => {
