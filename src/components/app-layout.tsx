@@ -226,7 +226,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <SidebarMenuItem>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <SidebarMenuButton tooltip={`Sort by ${currentSortOption.label}`}>
+                      <SidebarMenuButton tooltip={`Sort by ${currentSortOption.label}`} className="font-normal text-muted-foreground">
                         <CurrentSortIcon />
                         <span>Sort by {currentSortOption.label}</span>
                       </SidebarMenuButton>
@@ -246,7 +246,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <SidebarMenuItem>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <SidebarMenuButton tooltip={getGroupByLabel()}>
+                      <SidebarMenuButton tooltip={getGroupByLabel()} className="font-normal text-muted-foreground">
                         <FolderIcon /><span>{getGroupByLabel()}</span>
                       </SidebarMenuButton>
                     </DropdownMenuTrigger>
