@@ -78,7 +78,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let newPhotoURL: string | null = currentUser.photoURL;
     
     if (photoFile) {
-      if (!storage) return;
+      if (!storage) {
+        throw new Error("Firebase Storage is not configured. Please enable it in your Firebase project console.");
+      }
       const storageRef = ref(storage, `profile-pictures/${currentUser.uid}`);
       await uploadBytes(storageRef, photoFile);
       newPhotoURL = await getDownloadURL(storageRef);
