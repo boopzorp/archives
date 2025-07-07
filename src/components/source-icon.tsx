@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { Globe } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface SourceIconProps {
   hostname: string;
@@ -27,7 +28,12 @@ export function SourceIcon({ hostname }: SourceIconProps) {
       alt={`${hostname} favicon`}
       width={16} // Intrinsic size, can be overridden by CSS
       height={16} // Intrinsic size, can be overridden by CSS
-      className="rounded-sm" // Add a little rounding to the square favicons
+      className={cn(
+        "rounded-sm",
+        // GitHub's favicon has a white background which looks bad in dark mode.
+        // Inverting it fixes the issue for dark mode.
+        hostname.includes('github.com') && 'dark:invert'
+      )}
       onError={() => setError(true)}
       unoptimized // Necessary for dynamically sourced external images
     />
