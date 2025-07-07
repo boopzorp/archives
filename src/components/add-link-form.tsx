@@ -12,8 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import type { Link } from '@/lib/types';
-import { suggestTagsAndTitle, type SuggestTagsAndTitleOutput } from '@/ai/flows/suggest-tags-and-title';
+import type { Link, SuggestTagsAndTitleOutput } from '@/lib/types';
+import { getTweetMetadata, getBehanceMetadata, getGenericMetadata } from '@/lib/actions';
 
 const addLinkFormSchema = z.object({
   url: z.string().url({ message: "Please enter a valid URL." }),
@@ -84,7 +84,27 @@ export function AddLinkForm({ onSave, link }: LinkFormProps) {
     form.clearErrors("url");
     
     try {
-      const result = await suggestTagsAndTitle({ url });
+      const isTweet = /https?:\/\/(www\.)?(twitter|x)\.com/.test(url);
+      const isBehance = /https?:\/\/(www\.)?behance\.net/.test(url);
+
+      let result: SuggestTagsAndTitleOutput | { error: string };
+
+      if (isTweet) {
+        result = await getTweetMetadata(url);
+      } else if (isBehance) {
+        result = await getBehanceMetadata(url);
+      } else {
+        result = await getGenericMetadata(url);
+      }
+
+      if ('error' in result) {
+        toast({
+          variant: "destructive",
+          title: "Couldn't fetch details",
+          description: result.error,
+        });
+        return;
+      }
       
       const hasData = result.title || result.description || result.imageUrl || (result.tags && result.tags.length > 0);
       
@@ -98,7 +118,7 @@ export function AddLinkForm({ onSave, link }: LinkFormProps) {
       if (hasData) {
         toast({
           title: "Success!",
-          description: "We've automagically filled in the details for you.",
+          description: "We've filled in the details for you.",
         });
       } else {
          toast({
