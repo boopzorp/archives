@@ -83,9 +83,12 @@ export default function LinkCard({ link, onEdit }: LinkCardProps) {
   const tagColorMap = useMemo(() => 
     new Map(managedTags.map(t => [t.name, t.color]))
   , [managedTags]);
+  
+  const isBehanceLink = useMemo(() => /https?:\/\/(www\.)?behance\.net/.test(link.url), [link.url]);
 
   return (
     <Card className="flex flex-col h-full group overflow-hidden bg-card border rounded-lg hover:shadow-lg transition-shadow duration-300">
+      {!isBehanceLink && (
         <div className="relative aspect-video w-full overflow-hidden cursor-pointer bg-muted" onClick={openLink}>
             <img
                 src={link.imageUrl || `https://placehold.co/600x400.png`}
@@ -99,32 +102,33 @@ export default function LinkCard({ link, onEdit }: LinkCardProps) {
                 }}
             />
         </div>
-        <CardContent className="p-4 flex-grow">
-            <CardTitle className="text-base font-medium leading-tight line-clamp-2 mb-1 cursor-pointer" onClick={openLink}>
-                {link.title}
-            </CardTitle>
-            <p className="text-sm text-muted-foreground truncate">{brandName}</p>
-             {link.description && (
-              <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{link.description}</p>
-            )}
-            {link.tags && link.tags.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1">
-                {link.tags.slice(0, 3).map(tag => {
-                  const color = tagColorMap.get(tag);
-                  return (
-                    <Badge 
-                      key={tag} 
-                      variant="secondary" 
-                      className="font-normal"
-                      style={color ? { backgroundColor: color, color: 'hsl(var(--secondary-foreground))' } : {}}
-                    >
-                      {tag}
-                    </Badge>
-                  )
-                })}
-              </div>
-            )}
-        </CardContent>
+      )}
+      <CardContent className="p-4 flex-grow">
+          <CardTitle className="text-base font-medium leading-tight line-clamp-2 mb-1 cursor-pointer" onClick={openLink}>
+              {link.title}
+          </CardTitle>
+          <p className="text-sm text-muted-foreground truncate">{brandName}</p>
+            {link.description && (
+            <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{link.description}</p>
+          )}
+          {link.tags && link.tags.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {link.tags.slice(0, 3).map(tag => {
+                const color = tagColorMap.get(tag);
+                return (
+                  <Badge 
+                    key={tag} 
+                    variant="secondary" 
+                    className="font-normal"
+                    style={color ? { backgroundColor: color, color: 'hsl(var(--secondary-foreground))' } : {}}
+                  >
+                    {tag}
+                  </Badge>
+                )
+              })}
+            </div>
+          )}
+      </CardContent>
       
       <CardFooter className="p-2 pt-0 flex items-center justify-between">
         <div className="flex items-center gap-0">

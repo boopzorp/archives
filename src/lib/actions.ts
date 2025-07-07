@@ -50,71 +50,21 @@ export async function getBehanceMetadata(url: string): Promise<SuggestTagsAndTit
         .join(' ');
     }
 
-    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' } });
-    if (!res.ok) {
-      console.error(`${op}: fetch failed with status ${res.status}`);
-      return { error: 'Failed to fetch Behance project data.' };
-    }
-    const html = await res.text();
-    const $ = cheerio.load(html);
-
     if (!title) {
-        title = $('meta[property="og:title"]').attr('content') || $('title').text() || '';
-    }
-
-    let imageUrl = '';
-    
-    // Method 1: Parse embedded JSON data store
-    const scriptDataNode = $('#beconfig-store-state');
-    if (scriptDataNode.length > 0) {
-      const scriptDataText = scriptDataNode.text();
-      if (scriptDataText) {
-        try {
-          const pageData = JSON.parse(scriptDataText);
-          const projectData = pageData?.preloaded?.project?.data?.project;
-          if (projectData && projectData.covers) {
-              const covers = projectData.covers;
-              imageUrl = covers['max_808'] || covers['808'] || covers.original || covers['404'] || covers['202'] || Object.values(covers)[0] as string || '';
-          }
-        } catch (e) {
-          console.error(`${op}: Failed to parse Behance JSON data`, e);
-        }
-      }
-    }
-    
-    // Method 2 (Fallback): Look for Open Graph meta tags
-    if (!imageUrl) {
-        imageUrl = $('meta[property="og:image"]').attr('content') ||
-                   $('meta[property="og:image:url"]').attr('content') || '';
-    }
-    
-    // Method 3 (Fallback): Find a plausible project image via common selectors
-    if (!imageUrl) {
-      const mainImage = $('#project-cover-image img, .project-cover__image, .cover-244L-image-244L').first();
-      if (mainImage.length > 0) {
-        imageUrl = mainImage.attr('src') || '';
-      }
-    }
-    
-    if (imageUrl && !imageUrl.startsWith('http')) {
-      imageUrl = new URL(imageUrl, url).href;
+        return { error: "Could not determine title from Behance URL." };
     }
 
     const output: SuggestTagsAndTitleOutput = {
       title,
-      description: '', // As requested, no description.
-      imageUrl,
+      description: '',
+      imageUrl: undefined,
       tags: [],
     };
     
-    if (!output.title && !output.imageUrl) {
-        return { error: "Could not find a title or image for this Behance project." };
-    }
-
     return output;
   } catch (error) {
     console.error(`${op}:`, error);
-    return { error: 'An unexpected error occurred while fetching Behance project data.' };
+    return { error: 'An unexpected error occurred while processing Behance link.' };
   }
 }
 
