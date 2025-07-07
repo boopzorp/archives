@@ -109,13 +109,7 @@ export async function getWsjMetadata(url: string): Promise<SuggestTagsAndTitleOu
 
     const title = $('meta[property="og:title"]').attr('content') || $('h1').first().text() || getTitleFromUrl(url);
     const description = $('meta[property="og:description"]').attr('content') || $('meta[name="description"]').attr('content') || '';
-    let imageUrl = $('article picture img').attr('src') || $('meta[property="og:image"]').attr('content') || '';
     
-    if (imageUrl && !imageUrl.startsWith('http')) {
-      const urlObj = new URL(url);
-      imageUrl = new URL(imageUrl, urlObj.origin).href;
-    }
-
     if (!title) {
         return { error: "Could not determine title from WSJ URL." };
     }
@@ -123,7 +117,6 @@ export async function getWsjMetadata(url: string): Promise<SuggestTagsAndTitleOu
     const output: SuggestTagsAndTitleOutput = {
       title,
       description: description || 'From The Wall Street Journal',
-      imageUrl: imageUrl || undefined,
       tags: ['wsj', 'news', 'finance'],
     };
     

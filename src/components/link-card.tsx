@@ -116,22 +116,15 @@ export default function LinkCard({ link, onEdit }: LinkCardProps) {
     new Map(managedTags.map(t => [t.name, t.color]))
   , [managedTags]);
   
-  const isBehanceLink = useMemo(() => /https?:\/\/(www\.)?behance\.net/.test(link.url), [link.url]);
-
   return (
     <Card className="flex flex-col h-full group overflow-hidden bg-card border rounded-lg hover:shadow-lg transition-shadow duration-300">
-      {!isBehanceLink && (
+      {link.imageUrl && (
         <div className="relative aspect-video w-full overflow-hidden cursor-pointer bg-muted" onClick={openLink}>
             <img
-                src={link.imageUrl || `https://placehold.co/600x400.png`}
+                src={link.imageUrl}
                 alt={link.title}
                 className="absolute h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                 data-ai-hint="abstract background"
-                onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.onerror = null; // prevents looping
-                    target.src = 'https://placehold.co/600x400.png';
-                }}
             />
         </div>
       )}
