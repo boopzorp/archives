@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useState } from 'react';
 import {
@@ -14,8 +15,9 @@ import { useAuth } from '@/context/auth-context';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from './ui/dropdown-menu';
 import type { Folder, Tag as TagType, GroupByOption, SortByOption } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { Avatar, AvatarFallback } from './ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useRouter } from 'next/navigation';
+import { ProfileSettingsForm } from './profile-settings-form';
 
 const paletteColors = [
   '#fca5a5', '#fdba74', '#fde047', '#bef264', '#86efac', '#67e8f9', 
@@ -48,6 +50,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [tagToRename, setTagToRename] = useState<TagType | null>(null);
   const [renamedTagName, setRenamedTagName] = useState('');
   const [tagToDelete, setTagToDelete] = useState<TagType | null>(null);
+
+  // Profile Dialog State
+  const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -139,7 +144,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
         <Sidebar collapsible="icon" className="bg-card border-r">
           <SidebarHeader className='p-4 flex items-center justify-between group-data-[state=collapsed]:justify-center'>
-            <h1 className="text-2xl font-bold text-primary tracking-tighter group-data-[state=collapsed]:hidden">Linkflow</h1>
+            <h1 className="text-2xl font-bold text-primary tracking-tighter group-data-[state=collapsed]:hidden">archives</h1>
             <SidebarTrigger className="hidden md:flex" />
           </SidebarHeader>
           <SidebarContent>
@@ -396,6 +401,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="w-full justify-start gap-2 px-2">
                             <Avatar className="h-8 w-8">
+                                <AvatarImage src={user?.photoURL || undefined} alt={username || 'User'} />
                                 <AvatarFallback>{username?.charAt(0).toUpperCase()}</AvatarFallback>
                             </Avatar>
                             <div className="text-left group-data-[collapsible=icon]:hidden">
@@ -407,7 +413,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     <DropdownMenuContent align="end" side="right" className="w-56 mb-2">
                         <DropdownMenuLabel>My Account</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem disabled>
+                        <DropdownMenuItem onSelect={() => setIsProfileDialogOpen(true)}>
                             <User className="mr-2 h-4 w-4" />
                             <span>Profile</span>
                         </DropdownMenuItem>
@@ -421,6 +427,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </Sidebar>
         <SidebarInset>
           {children}
+
+          <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Profile Settings</DialogTitle>
+              </DialogHeader>
+              <ProfileSettingsForm onFinished={() => setIsProfileDialogOpen(false)} />
+            </DialogContent>
+          </Dialog>
 
           <Dialog open={!!folderToRename || !!tagToRename} onOpenChange={(open) => { if (!open) { setFolderToRename(null); setTagToRename(null); } }}>
             <DialogContent className="sm:max-w-[425px]">

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -82,7 +83,7 @@ export default function SignupPage() {
         <div className="text-center mb-6">
             <Link href="/" className="inline-flex items-center gap-2">
                 <LinkIcon className="h-8 w-8 text-primary" />
-                <span className="text-2xl font-bold">Linkflow</span>
+                <span className="text-2xl font-bold">archives</span>
             </Link>
         </div>
         <Card>

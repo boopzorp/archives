@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
@@ -6,7 +7,7 @@ import { AuthProvider } from '@/context/auth-context';
 import { AppProvider } from '@/context/app-context';
 
 export const metadata: Metadata = {
-  title: 'Linkflow',
+  title: 'archives',
   description: 'A cross platform link archive app',
 };
 

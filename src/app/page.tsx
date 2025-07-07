@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -13,7 +14,7 @@ export default function LandingPage() {
         <div className="container flex h-14 items-center">
           <Link href="/" className="flex items-center gap-2 mr-6">
             <LinkIcon className="h-6 w-6 text-primary" />
-            <span className="font-bold text-lg">Linkflow</span>
+            <span className="font-bold text-lg">archives</span>
           </Link>
           <nav className="flex items-center gap-4 text-sm ml-auto">
             <Link href="/login" className="transition-colors hover:text-primary">
@@ -41,7 +42,7 @@ export default function LandingPage() {
               className="max-w-lg text-lg text-muted-foreground animate-fade-in"
               style={{ animationDelay: '0.4s' }}
             >
-              Stop losing track of valuable links. Linkflow helps you save, organize, and rediscover your digital world with smart tagging and beautiful organization.
+              Stop losing track of valuable links. archives helps you save, organize, and rediscover your digital world with smart tagging and beautiful organization.
             </p>
             <div
               className="flex flex-col sm:flex-row gap-4 animate-fade-in"
@@ -94,7 +95,7 @@ export default function LandingPage() {
       </main>
       <footer className="border-t py-6">
         <div className="container text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} Linkflow. All rights reserved.
+          © {new Date().getFullYear()} archives. All rights reserved.
         </div>
       </footer>
     </div>
