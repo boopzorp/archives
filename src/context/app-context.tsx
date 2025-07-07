@@ -14,6 +14,7 @@ type ActiveFilter = {
 
 interface AppContextState {
   loading: boolean;
+  error: string | null;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   links: Link[];
@@ -41,6 +42,7 @@ const AppContext = createContext<AppContextState | undefined>(undefined);
 export function AppProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [links, setLinks] = useState<Link[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -55,48 +57,71 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setFolders([]);
       setTags([]);
       setLoading(false);
+      setError(null);
       return;
     }
 
     setLoading(true);
+    setError(null);
     const userDocRef = doc(db, 'users', user.uid);
-    const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setLinks(data.links || []);
-        setFolders(data.folders || []);
-        
-        const allTagNamesInLinks = new Set<string>();
-        (data.links || []).forEach((link: Link) => {
-          link.tags?.forEach(tag => allTagNamesInLinks.add(tag));
-        });
+    const unsubscribe = onSnapshot(userDocRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setLinks(data.links || []);
+          setFolders(data.folders || []);
+          
+          const allTagNamesInLinks = new Set<string>();
+          (data.links || []).forEach((link: Link) => {
+            link.tags?.forEach(tag => allTagNamesInLinks.add(tag));
+          });
 
-        const currentTags = data.tags || [];
-        const tagMap = new Map(currentTags.map((t: Tag) => [t.name, t]));
-        
-        allTagNamesInLinks.forEach(name => {
-          if (!tagMap.has(name)) {
-            tagMap.set(name, { name, color: undefined });
+          const currentTags = data.tags || [];
+          const tagMap = new Map(currentTags.map((t: Tag) => [t.name, t]));
+          
+          allTagNamesInLinks.forEach(name => {
+            if (!tagMap.has(name)) {
+              tagMap.set(name, { name, color: undefined });
+            }
+          });
+
+          const newTags: Tag[] = [];
+          tagMap.forEach((tag, name) => {
+            if (allTagNamesInLinks.has(name)) {
+              newTags.push(tag);
+            }
+          });
+
+          const sortedTags = newTags.sort((a, b) => a.name.localeCompare(b.name));
+          setTags(sortedTags);
+
+          // If tag list changed, update it in firestore
+          if(JSON.stringify(sortedTags) !== JSON.stringify(currentTags)) {
+            updateDoc(userDocRef, { tags: sortedTags });
           }
-        });
-
-        const newTags: Tag[] = [];
-        tagMap.forEach((tag, name) => {
-          if (allTagNamesInLinks.has(name)) {
-            newTags.push(tag);
-          }
-        });
-
-        const sortedTags = newTags.sort((a, b) => a.name.localeCompare(b.name));
-        setTags(sortedTags);
-
-        // If tag list changed, update it in firestore
-        if(JSON.stringify(sortedTags) !== JSON.stringify(currentTags)) {
-          updateDoc(userDocRef, { tags: sortedTags });
+        } else {
+            // If the user document doesn't exist, this might indicate a permission issue on read
+            // or the document genuinely doesn't exist. The error handler will catch permission issues.
+            setLinks([]);
+            setFolders([]);
+            setTags([]);
         }
+        setLoading(false);
+        setError(null);
+      },
+      (err) => {
+        console.error("Firestore snapshot listener error:", err);
+        if (err.code === 'permission-denied') {
+            setError("permission-denied");
+        } else {
+            setError("firestore-error");
+        }
+        setLoading(false);
+        setLinks([]);
+        setFolders([]);
+        setTags([]);
       }
-      setLoading(false);
-    });
+    );
 
     return () => unsubscribe();
   }, [user]);
@@ -272,6 +297,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value = {
     loading,
+    error,
     searchTerm,
     setSearchTerm,
     links,

@@ -27,7 +27,7 @@ function DashboardPage() {
   const { toast } = useToast();
   const isFirebaseReady = !!auth && !!db;
 
-  const { searchTerm, links, addLink, updateLink, activeFilter, folders, groupBy, sortBy, loading: dataLoading } = useAppContext();
+  const { searchTerm, links, addLink, updateLink, activeFilter, folders, groupBy, sortBy, loading: dataLoading, error } = useAppContext();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [linkToEdit, setLinkToEdit] = useState<Link | null>(null);
 
@@ -214,11 +214,40 @@ function DashboardPage() {
                 </AlertDescription>
             </Alert>
         )}
+        {error === 'permission-denied' && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Firestore Permission Denied</AlertTitle>
+            <AlertDescription>
+              <p>The app can't access your data. This is likely due to Firestore security rules.</p>
+              <p className="mt-2">Please go to your <strong>Firebase Console</strong> &gt; <strong>Firestore Database</strong> &gt; <strong>Rules</strong> tab and replace the existing rules with the following:</p>
+              <pre className="mt-2 p-2 bg-muted/50 rounded-md text-xs whitespace-pre-wrap font-mono">
+                {`rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}`}
+              </pre>
+            </AlertDescription>
+          </Alert>
+        )}
+        {error && error !== 'permission-denied' && (
+           <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Database Error</AlertTitle>
+            <AlertDescription>
+              An unexpected error occurred while connecting to the database. Please check the console for more details.
+            </AlertDescription>
+          </Alert>
+        )}
         {activeFilter.type === 'graph' ? (
           <GraphView />
         ) : (
           <>
-            { (dataLoading && links.length === 0) ? (
+            { (dataLoading && links.length === 0 && !error) ? (
                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {[...Array(8)].map((_, i) => (
                       <div key={i} className="space-y-2">
@@ -244,6 +273,7 @@ function DashboardPage() {
                 ))}
               </div>
             ) : (
+              !error &&
               <div className="flex flex-col items-center justify-center text-center py-20">
                 <div className="p-4 bg-primary/10 rounded-full mb-4">
                    {searchTerm ? <SearchIcon className="w-12 h-12 text-primary" /> : 
