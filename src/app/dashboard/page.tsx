@@ -1,7 +1,8 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, WifiOff, Settings, Search as SearchIcon, Star, MessageSquare } from 'lucide-react';
+import { Plus, WifiOff, Search as SearchIcon, Star, MessageSquare } from 'lucide-react';
 import { AppLayout } from '@/components/app-layout';
 import LinkCard from '@/components/link-card';
 import { GraphView } from '@/components/graph-view';
@@ -15,6 +16,7 @@ import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { format, isToday, isYesterday, parseISO } from 'date-fns';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
@@ -177,9 +179,7 @@ function DashboardPage() {
               <AddLinkForm onSave={handleSaveLink} />
             </SheetContent>
           </Sheet>
-          <Button variant="ghost" size="icon">
-            <Settings className="h-5 w-5" />
-          </Button>
+          <ThemeToggle />
         </div>
       </header>
 
