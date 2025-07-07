@@ -25,27 +25,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    if (!auth || !db) {
+    if (!auth) {
       setLoading(false);
       return;
     }
     
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setUser(user);
-        try {
-          const userDocRef = doc(db, 'users', user.uid);
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        // Also fetch the username from Firestore for display
+        if (db) {
+          const userDocRef = doc(db, 'users', currentUser.uid);
           const userDoc = await getDoc(userDocRef);
           if (userDoc.exists()) {
-            setUsername(userDoc.data().username || user.displayName);
+            setUsername(userDoc.data().username || currentUser.displayName);
           } else {
-             setUsername(user.displayName);
+             setUsername(currentUser.displayName);
           }
-        } catch (error) {
-          console.error("Error fetching user profile from Firestore:", error);
-          setUsername(user.displayName);
+        } else {
+          setUsername(currentUser.displayName);
         }
-        
       } else {
         setUser(null);
         setUsername(null);
@@ -54,71 +53,73 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, []); // Empty dependency array ensures this only runs once and prevents re-renders.
 
   const updateUserProfile = async (updates: { displayName?: string; photoFile?: File; photoURL?: string | null }) => {
-    if (!auth?.currentUser || !db) {
-      throw new Error("Authentication service is not properly configured.");
+    if (!auth?.currentUser || !db || !storage) {
+      throw new Error("Authentication or storage service is not properly configured.");
     }
   
     const { currentUser } = auth;
     const { displayName, photoFile, photoURL: newPhotoUrlInput } = updates;
-    const oldPhotoURL = currentUser.photoURL;
   
     const authUpdates: { displayName?: string; photoURL?: string | null } = {};
     const dbUpdates: { username?: string; photoURL?: string | null } = {};
   
-    // Determine the final photo URL
-    let finalPhotoURL: string | null = oldPhotoURL;
+    let finalPhotoURL: string | null = currentUser.photoURL;
+    
+    // 1. Handle photo upload/removal first
     if (photoFile) {
-      // New file uploaded
-      if (!storage) throw new Error("Firebase Storage is not configured.");
+      // Case A: New file is uploaded
       const storageRef = ref(storage, `profile-pictures/${currentUser.uid}`);
       await uploadBytes(storageRef, photoFile);
       finalPhotoURL = await getDownloadURL(storageRef);
-    } else if (newPhotoUrlInput !== oldPhotoURL) {
-      // Default avatar selected or photo removed
+    } else if (newPhotoUrlInput !== undefined && newPhotoUrlInput !== currentUser.photoURL) {
+      // Case B: Photo is removed (null) or set to a default avatar (data URI)
       finalPhotoURL = newPhotoUrlInput;
+
+      // If there was a custom photo before (i.e., not a data URI), delete it from storage
+      if (currentUser.photoURL && currentUser.photoURL.includes('firebasestorage.googleapis.com')) {
+        const storageRef = ref(storage, `profile-pictures/${currentUser.uid}`);
+        try {
+          await deleteObject(storageRef);
+        } catch (error: any) {
+          if (error.code !== 'storage/object-not-found') {
+            console.error("Failed to delete old profile picture, but continuing update:", error);
+          }
+        }
+      }
     }
-  
-    // Check for changes and prepare update objects
+
+    // 2. Determine if updates are needed
     if (displayName && displayName !== currentUser.displayName) {
       authUpdates.displayName = displayName;
       dbUpdates.username = displayName;
     }
-    if (finalPhotoURL !== oldPhotoURL) {
+    if (finalPhotoURL !== currentUser.photoURL) {
       authUpdates.photoURL = finalPhotoURL;
       dbUpdates.photoURL = finalPhotoURL;
     }
   
-    // Execute updates if there are any changes
+    // 3. Apply updates to Firebase Auth and Firestore if there are changes
+    const updatePromises: Promise<any>[] = [];
+
     if (Object.keys(authUpdates).length > 0) {
-      await updateProfile(currentUser, authUpdates);
+      updatePromises.push(updateProfile(currentUser, authUpdates));
     }
     if (Object.keys(dbUpdates).length > 0) {
       const userDocRef = doc(db, 'users', currentUser.uid);
-      await updateDoc(userDocRef, dbUpdates);
-    }
-  
-    // If photo was removed (set to null), delete it from storage
-    if (finalPhotoURL === null && oldPhotoURL) {
-      if (!storage) throw new Error("Firebase Storage is not configured.");
-      const storageRef = ref(storage, `profile-pictures/${currentUser.uid}`);
-      try {
-        await deleteObject(storageRef);
-      } catch (error: any) {
-        if (error.code !== 'storage/object-not-found') {
-          console.error("Failed to delete profile picture from storage:", error);
-        }
-      }
+      updatePromises.push(updateDoc(userDocRef, dbUpdates));
     }
     
-    // Manually update local username state if it changed
-    if (dbUpdates.username) {
-      setUsername(dbUpdates.username);
+    // Wait for all updates to complete
+    if (updatePromises.length > 0) {
+      await Promise.all(updatePromises);
     }
+    
+    // No manual state updates here.
+    // The onAuthStateChanged listener will automatically receive the update and re-render the context.
   };
-
 
   const signOut = async () => {
     if (!auth) {
