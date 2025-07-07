@@ -31,7 +31,7 @@ const defaultAvatars = [
 ];
 
 export function ProfileSettingsForm({ onFinished }: { onFinished: () => void }) {
-  const { user, username, updateUserProfile } = useAuth();
+  const { user, username, updateUserProfile, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -45,16 +45,18 @@ export function ProfileSettingsForm({ onFinished }: { onFinished: () => void }) 
     },
   });
 
-  const { reset } = form;
+  const { reset, formState: { isDirty } } = form;
 
   useEffect(() => {
-    if (user) {
-      setPreviewUrl(user.photoURL || null);
+    if (!authLoading) {
+      if (user) {
+        setPreviewUrl(user.photoURL || null);
+      }
+      if (username) {
+        reset({ username });
+      }
     }
-    if (username) {
-      reset({ username });
-    }
-  }, [user, username, reset]);
+  }, [user, username, reset, authLoading]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -74,31 +76,33 @@ export function ProfileSettingsForm({ onFinished }: { onFinished: () => void }) 
     setPreviewUrl(null);
   }
 
-  const onSubmit = (data: ProfileFormValues) => {
+  const onSubmit = async (data: ProfileFormValues) => {
     setIsLoading(true);
+    try {
+      await updateUserProfile({
+        displayName: data.username,
+        photoFile: selectedFile,
+        photoURL: previewUrl,
+      });
 
-    // Fire-and-forget the update. We won't await the result from Firebase,
-    // which prevents the UI from hanging.
-    updateUserProfile({
-      displayName: data.username,
-      photoFile: selectedFile,
-      photoURL: previewUrl,
-    }).catch(error => {
-      // Log any errors to the console for debugging. The UI will still proceed optimistically.
-      console.error("Background profile update failed:", error);
-    });
-    
-    // Per your request, we force the UI to update after a 3-second delay,
-    // providing an optimistic and responsive feel.
-    setTimeout(() => {
-      setIsLoading(false);
       toast({
         title: "Profile Updated",
-        description: "Your changes have been submitted.",
+        description: "Your changes have been saved successfully.",
       });
       onFinished();
-    }, 3000);
+    } catch (error) {
+      console.error("Profile update failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: (error as Error).message || "An unexpected error occurred.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const isChanged = isDirty || selectedFile || previewUrl !== user?.photoURL;
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -144,7 +148,7 @@ export function ProfileSettingsForm({ onFinished }: { onFinished: () => void }) 
         )}
       </div>
 
-      <Button type="submit" className="w-full" disabled={isLoading}>
+      <Button type="submit" className="w-full" disabled={isLoading || !isChanged}>
         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         Save Changes
       </Button>

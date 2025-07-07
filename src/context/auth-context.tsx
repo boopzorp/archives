@@ -18,6 +18,64 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const updateUserProfile = async (updates: { displayName?: string; photoFile?: File | null; photoURL?: string | null }) => {
+  const currentUser = auth?.currentUser;
+  if (!auth || !currentUser || !db || !storage) {
+    throw new Error("Authentication, database, or storage service is not properly configured.");
+  }
+
+  const { displayName, photoFile, photoURL: newPhotoUrlInput } = updates;
+  const userDocRef = doc(db, 'users', currentUser.uid);
+  const oldPhotoURL = currentUser.photoURL;
+  let finalPhotoURL: string | null = oldPhotoURL;
+
+  // Step 1: Handle photo upload if a new file is provided
+  if (photoFile) {
+    const storageRef = ref(storage, `profile-pictures/${currentUser.uid}`);
+    await uploadBytes(storageRef, photoFile);
+    finalPhotoURL = await getDownloadURL(storageRef);
+  } else if (newPhotoUrlInput !== oldPhotoURL) {
+    // This handles selecting a default avatar or removing the photo by setting URL to null
+    finalPhotoURL = newPhotoUrlInput;
+  }
+
+  // Step 2: Prepare updates for Auth and Firestore
+  const authUpdates: { displayName?: string; photoURL?: string | null } = {};
+  const dbUpdates: { username?: string; photoURL?: string | null } = {};
+
+  if (displayName && displayName !== currentUser.displayName) {
+    authUpdates.displayName = displayName;
+    dbUpdates.username = displayName;
+  }
+  // Use hasOwnProperty because finalPhotoURL could be null, which is a valid update
+  if (finalPhotoURL !== oldPhotoURL) {
+    authUpdates.photoURL = finalPhotoURL;
+    dbUpdates.photoURL = finalPhotoURL;
+  }
+
+  // Step 3: Apply updates to Firebase Auth and Firestore if there are any changes
+  if (Object.keys(authUpdates).length > 0) {
+    await updateProfile(currentUser, authUpdates);
+  }
+  if (Object.keys(dbUpdates).length > 0) {
+    await updateDoc(userDocRef, dbUpdates);
+  }
+
+  // Step 4: Delete old photo from storage if it was replaced or removed
+  // and it was a file we stored (not a default avatar or null).
+  if (oldPhotoURL && oldPhotoURL !== finalPhotoURL && oldPhotoURL.includes('firebasestorage.googleapis.com')) {
+    const oldStorageRef = ref(storage, `profile-pictures/${currentUser.uid}`);
+    try {
+      await deleteObject(oldStorageRef);
+    } catch (error: any) {
+      // It's okay if the object doesn't exist, log other errors.
+      if (error.code !== 'storage/object-not-found') {
+        console.error("Failed to delete old profile picture:", error);
+      }
+    }
+  }
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [username, setUsername] = useState<string | null>(null);
@@ -40,91 +98,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-    if (!db) {
-      setUsername(user.displayName);
-      setLoading(false);
-      return;
-    }
-    const userDocRef = doc(db, 'users', user.uid);
-    const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setUsername(data.username || user.displayName);
-      } else {
-        setDoc(userDocRef, { 
-          username: user.displayName, 
-          email: user.email, 
-          createdAt: new Date().toISOString() 
-        }).catch(console.error);
+    let unsubscribeFirestore: Unsubscribe | undefined;
+    if (user) {
+      if (!db) {
         setUsername(user.displayName);
+        setLoading(false);
+        return;
       }
-      setLoading(false);
-    }, (error) => {
-      console.error("Error with Firestore snapshot:", error);
-      setUsername(user.displayName);
-      setLoading(false);
-    });
-    return () => unsubscribeFirestore();
-  }, [user]);
-
-  const updateUserProfile = async (updates: { displayName?: string; photoFile?: File | null; photoURL?: string | null }) => {
-    if (!auth?.currentUser || !db || !storage) {
-      throw new Error("Authentication, database, or storage service is not properly configured.");
-    }
-
-    const { currentUser } = auth;
-    const { displayName, photoFile, photoURL: newPhotoUrlInput } = updates;
-    const userDocRef = doc(db, 'users', currentUser.uid);
-
-    let finalPhotoURL = currentUser.photoURL;
-
-    // Determine if photo was uploaded, removed, or changed to a default avatar
-    if (photoFile) {
-        // New file uploaded
-        const storageRef = ref(storage, `profile-pictures/${currentUser.uid}`);
-        await uploadBytes(storageRef, photoFile);
-        finalPhotoURL = await getDownloadURL(storageRef);
-    } else if (newPhotoUrlInput !== currentUser.photoURL) {
-        // URL has changed (either to null for removal, or a new default avatar)
-        finalPhotoURL = newPhotoUrlInput;
-        // If the old photo was in storage, delete it
-        if (currentUser.photoURL && currentUser.photoURL.includes('firebasestorage.googleapis.com')) {
-            const oldStorageRef = ref(storage, `profile-pictures/${currentUser.uid}`);
-            try {
-                await deleteObject(oldStorageRef);
-            } catch (error: any) {
-                if (error.code !== 'storage/object-not-found') {
-                    console.error("Failed to delete old profile picture:", error);
-                }
-            }
+      const userDocRef = doc(db, 'users', user.uid);
+      unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setUsername(data.username || user.displayName);
+        } else {
+          setDoc(userDocRef, { 
+            username: user.displayName, 
+            email: user.email, 
+            createdAt: new Date().toISOString() 
+          }).catch(console.error);
+          setUsername(user.displayName);
         }
+        setLoading(false);
+      }, (error) => {
+        console.error("Error with Firestore snapshot:", error);
+        setUsername(user.displayName);
+        setLoading(false);
+      });
+    } else {
+      setLoading(false);
     }
-
-    // Prepare updates for Auth and Firestore
-    const authUpdates: { displayName?: string; photoURL?: string | null } = {};
-    const dbUpdates: { username?: string; photoURL?: string | null } = {};
-
-    if (displayName && displayName !== currentUser.displayName) {
-        authUpdates.displayName = displayName;
-        dbUpdates.username = displayName;
-    }
-    if (finalPhotoURL !== currentUser.photoURL) {
-        authUpdates.photoURL = finalPhotoURL;
-        dbUpdates.photoURL = finalPhotoURL;
-    }
-
-    // Sequentially apply updates if there are any changes
-    if (Object.keys(authUpdates).length > 0) {
-        await updateProfile(currentUser, authUpdates);
-    }
-    if (Object.keys(dbUpdates).length > 0) {
-        await updateDoc(userDocRef, dbUpdates);
-    }
-  };
+    
+    return () => {
+      if (unsubscribeFirestore) {
+        unsubscribeFirestore();
+      }
+    };
+  }, [user]);
 
   const signOut = async () => {
     if (!auth) {
