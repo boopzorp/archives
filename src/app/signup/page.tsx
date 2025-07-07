@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -18,6 +18,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Link as LinkIcon } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useAuth } from '@/context/auth-context';
 
 const signupSchema = z.object({
   username: z.string().min(3, { message: "Username must be at least 3 characters." }).max(20, { message: "Username must be less than 20 characters." }),
@@ -32,6 +33,13 @@ export default function SignupPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const isFirebaseReady = !!auth && !!db;
+  const { user, loading: authLoading } = useAuth();
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace('/dashboard');
+    }
+  }, [user, authLoading, router]);
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -62,8 +70,6 @@ export default function SignupPage() {
         tags: [],
       });
 
-      router.push('/dashboard');
-
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -76,6 +82,14 @@ export default function SignupPage() {
       setIsLoading(false);
     }
   };
+
+  if (authLoading || user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -109,7 +123,7 @@ export default function SignupPage() {
                     <FormItem>
                       <FormLabel>Username</FormLabel>
                       <FormControl>
-                        <Input placeholder="yourusername" {...field} disabled={!isFirebaseReady} />
+                        <Input placeholder="yourusername" {...field} disabled={!isFirebaseReady || isLoading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -122,7 +136,7 @@ export default function SignupPage() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="you@example.com" {...field} disabled={!isFirebaseReady} />
+                        <Input placeholder="you@example.com" {...field} disabled={!isFirebaseReady || isLoading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -135,7 +149,7 @@ export default function SignupPage() {
                     <FormItem>
                       <FormLabel>Password</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} disabled={!isFirebaseReady} />
+                        <Input type="password" placeholder="••••••••" {...field} disabled={!isFirebaseReady || isLoading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

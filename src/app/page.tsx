@@ -2,12 +2,64 @@
 "use client";
 
 import Link from 'next/link';
-import { ArrowRight, Link as LinkIcon, Star, Folder } from 'lucide-react';
+import { ArrowRight, Link as LinkIcon, Star, Folder, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/auth-context';
 
 export default function LandingPage() {
+  const { user, loading: authLoading } = useAuth();
+
+  const renderAuthButtons = () => {
+    if (authLoading) {
+      return <Loader2 className="h-5 w-5 animate-spin" />;
+    }
+    if (user) {
+      return (
+        <Button asChild>
+          <Link href="/dashboard">
+            Go to Dashboard <ArrowRight className="ml-2 h-4 w-4" />
+          </Link>
+        </Button>
+      );
+    }
+    return (
+      <>
+        <Link href="/login" className="transition-colors hover:text-primary">
+          Log In
+        </Link>
+        <Button asChild>
+          <Link href="/signup">
+            Sign Up <ArrowRight className="ml-2 h-4 w-4" />
+          </Link>
+        </Button>
+      </>
+    );
+  };
+  
+  const renderCtaButtons = () => {
+    if (authLoading) {
+      return <div className="h-11 w-full" />; // Placeholder to prevent layout shift
+    }
+    if (user) {
+      return (
+        <Button size="lg" asChild>
+          <Link href="/dashboard">Go to Your Dashboard</Link>
+        </Button>
+      );
+    }
+    return (
+      <>
+        <Button size="lg" asChild>
+          <Link href="/signup">Get Started for Free</Link>
+        </Button>
+        <Button size="lg" variant="outline" asChild>
+          <Link href="/login">I have an account</Link>
+        </Button>
+      </>
+    );
+  }
+
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -17,14 +69,7 @@ export default function LandingPage() {
             <span className="font-bold text-lg">archives</span>
           </Link>
           <nav className="flex items-center gap-4 text-sm ml-auto">
-            <Link href="/login" className="transition-colors hover:text-primary">
-              Log In
-            </Link>
-            <Button asChild>
-              <Link href="/signup">
-                Sign Up <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
+            {renderAuthButtons()}
           </nav>
         </div>
       </header>
@@ -48,12 +93,7 @@ export default function LandingPage() {
               className="flex flex-col sm:flex-row gap-4 animate-fade-in"
               style={{ animationDelay: '0.6s' }}
             >
-              <Button size="lg" asChild>
-                <Link href="/signup">Get Started for Free</Link>
-              </Button>
-              <Button size="lg" variant="outline" asChild>
-                <Link href="/login">I have an account</Link>
-              </Button>
+              {renderCtaButtons()}
             </div>
           </div>
           <div className="relative animate-fade-in" style={{ animationDelay: '0.5s' }}>

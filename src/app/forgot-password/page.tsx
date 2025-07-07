@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -17,6 +17,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Link as LinkIcon } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useAuth } from '@/context/auth-context';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -29,6 +30,13 @@ export default function ForgotPasswordPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const isFirebaseReady = !!auth;
+  const { user, loading: authLoading } = useAuth();
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace('/dashboard');
+    }
+  }, [user, authLoading, router]);
 
   const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -57,6 +65,14 @@ export default function ForgotPasswordPage() {
       setIsLoading(false);
     }
   };
+
+  if (authLoading || user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
