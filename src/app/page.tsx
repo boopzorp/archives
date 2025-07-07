@@ -6,6 +6,7 @@ import { ArrowRight, Link as LinkIcon, Star, Folder, Loader2 } from 'lucide-reac
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/context/auth-context';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function LandingPage() {
   const { user, loading: authLoading } = useAuth();
@@ -68,7 +69,8 @@ export default function LandingPage() {
             <LinkIcon className="h-6 w-6 text-primary" />
             <span className="font-bold text-lg">archives</span>
           </Link>
-          <nav className="flex items-center gap-4 text-sm ml-auto">
+          <nav className="flex items-center gap-2 text-sm ml-auto">
+            <ThemeToggle />
             {renderAuthButtons()}
           </nav>
         </div>
@@ -80,14 +82,13 @@ export default function LandingPage() {
               className="text-4xl md:text-6xl font-bold tracking-tighter animate-fade-in"
               style={{ animationDelay: '0.2s' }}
             >
-              Your personal link <br />
-              <span className="text-primary">command center.</span>
+              The cozy corner of the internet for all your links.
             </h1>
             <p
               className="max-w-lg text-lg text-muted-foreground animate-fade-in"
               style={{ animationDelay: '0.4s' }}
             >
-              Stop losing track of valuable links. archives helps you save, organize, and rediscover your digital world with smart tagging and beautiful organization.
+              Tired of endless bookmarks and lost tabs? archives is your fun, ridiculously simple way to save, organize, and actually *find* the cool stuff you discover online.
             </p>
             <div
               className="flex flex-col sm:flex-row gap-4 animate-fade-in"
@@ -103,8 +104,8 @@ export default function LandingPage() {
                         <LinkIcon className="w-6 h-6 text-primary" />
                     </div>
                     <div>
-                        <h3 className="font-bold">AI-Powered Tagging</h3>
-                        <p className="text-sm text-muted-foreground">Automatically get title, description, and tags.</p>
+                        <h3 className="font-bold">Effortless Saving</h3>
+                        <p className="text-sm text-muted-foreground">Just paste a link. We'll grab the title, description, and preview for you.</p>
                     </div>
                 </div>
             </Card>
@@ -114,8 +115,8 @@ export default function LandingPage() {
                         <Folder className="w-6 h-6 text-accent" />
                     </div>
                     <div>
-                        <h3 className="font-bold">Organize with Folders</h3>
-                        <p className="text-sm text-muted-foreground">Group your links into custom categories.</p>
+                        <h3 className="font-bold">Organize Your Way</h3>
+                        <p className="text-sm text-muted-foreground">Use folders and tags to create a system that makes perfect sense to you.</p>
                     </div>
                 </div>
             </Card>
@@ -125,8 +126,8 @@ export default function LandingPage() {
                         <Star className="w-6 h-6 text-yellow-500" />
                     </div>
                     <div>
-                        <h3 className="font-bold">Never Lose a Gem</h3>
-                        <p className="text-sm text-muted-foreground">Favorite your most important links.</p>
+                        <h3 className="font-bold">Rediscover Your Gems</h3>
+                        <p className="text-sm text-muted-foreground">Favorite your top finds and use our powerful search to unearth treasures.</p>
                     </div>
                 </div>
             </Card>
