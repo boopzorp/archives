@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
@@ -31,20 +30,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setUser(user);
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          setUsername(userDoc.data().username || user.displayName);
+      try {
+        if (user) {
+          setUser(user);
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDoc = await getDoc(userDocRef);
+          if (userDoc.exists()) {
+            setUsername(userDoc.data().username || user.displayName);
+          } else {
+            setUsername(user.displayName || user.email);
+          }
         } else {
-          setUsername(user.displayName || user.email);
+          setUser(null);
+          setUsername(null);
         }
-      } else {
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        // Reset state on error
         setUser(null);
         setUsername(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
