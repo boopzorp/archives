@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -35,8 +35,14 @@ export function ProfileSettingsForm({ onFinished }: { onFinished: () => void }) 
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(user?.photoURL || null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (user) {
+      setPreviewUrl(user.photoURL || null);
+    }
+  }, [user]);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -63,28 +69,30 @@ export function ProfileSettingsForm({ onFinished }: { onFinished: () => void }) 
     setPreviewUrl(null);
   }
 
-  const onSubmit = async (data: ProfileFormValues) => {
+  const onSubmit = (data: ProfileFormValues) => {
     setIsLoading(true);
-    try {
-      await updateUserProfile({
-        displayName: data.username,
-        photoFile: selectedFile || undefined,
-        photoURL: selectedFile ? undefined : previewUrl,
-      });
+
+    // Fire-and-forget the update. We won't await the result from Firebase,
+    // which prevents the UI from hanging.
+    updateUserProfile({
+      displayName: data.username,
+      photoFile: selectedFile,
+      photoURL: previewUrl,
+    }).catch(error => {
+      // Log any errors to the console for debugging. The UI will still proceed optimistically.
+      console.error("Background profile update failed:", error);
+    });
+    
+    // Per your request, we force the UI to update after a 3-second delay,
+    // providing an optimistic and responsive feel.
+    setTimeout(() => {
+      setIsLoading(false);
       toast({
         title: "Profile Updated",
-        description: "Your changes have been saved successfully.",
+        description: "Your changes have been submitted.",
       });
       onFinished();
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Update Failed',
-        description: error.message || 'An unexpected error occurred.',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    }, 3000);
   };
 
   return (
