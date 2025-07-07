@@ -41,18 +41,6 @@ export async function getTweetMetadata(url: string): Promise<SuggestTagsAndTitle
 export async function getBehanceMetadata(url: string): Promise<SuggestTagsAndTitleOutput | { error: string }> {
   const op = 'actions.getBehanceMetadata';
   try {
-    const urlObj = new URL(url);
-    const pathParts = urlObj.pathname.split('/').filter(Boolean);
-    let title = '';
-
-    if (pathParts.length > 2 && pathParts[0] === 'gallery') {
-      const titleSlug = pathParts[2];
-      title = titleSlug
-        .split('-')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
-    }
-
     const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36' } });
     if (!res.ok) {
       console.error(`${op}: fetch failed with status ${res.status}`);
@@ -60,23 +48,22 @@ export async function getBehanceMetadata(url: string): Promise<SuggestTagsAndTit
     }
     const html = await res.text();
     const $ = cheerio.load(html);
+
+    const nextDataScript = $('#__NEXT_DATA__').html();
+    if (!nextDataScript) {
+      return { error: 'Could not parse Behance project data. The page structure may have changed.' };
+    }
+
+    const data = JSON.parse(nextDataScript);
+    const project = data?.props?.pageProps?.project;
+
+    if (!project) {
+      return { error: 'Could not find project data within the Behance page.' };
+    }
+
+    const title = project.name || '';
+    const imageUrl = project.covers?.original || project.covers?.['808'] || project.covers?.['404'] || '';
     
-    if (!title) {
-       title =
-        $('meta[property="og:title"]').attr('content') ||
-        $('title').text() ||
-        '';
-    }
-
-    let imageUrl = 
-      $('meta[property="og:image"]').attr('content') ||
-      $('meta[property="og:image:url"]').attr('content') ||
-      '';
-
-    if (imageUrl && !imageUrl.startsWith('http')) {
-      imageUrl = new URL(imageUrl, urlObj.origin).href;
-    }
-
     const output: SuggestTagsAndTitleOutput = {
       title,
       description: '',
@@ -91,6 +78,9 @@ export async function getBehanceMetadata(url: string): Promise<SuggestTagsAndTit
     return output;
   } catch (error) {
     console.error(`${op}:`, error);
+    if (error instanceof SyntaxError) {
+        return { error: 'Failed to parse JSON data from Behance page.' };
+    }
     return { error: 'An unexpected error occurred while fetching Behance project data.' };
   }
 }
