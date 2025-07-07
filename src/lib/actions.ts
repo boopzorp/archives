@@ -41,6 +41,17 @@ export async function getTweetMetadata(url: string): Promise<SuggestTagsAndTitle
 export async function getBehanceMetadata(url: string): Promise<SuggestTagsAndTitleOutput | { error: string }> {
   const op = 'actions.getBehanceMetadata';
   try {
+    // 1. Title from URL slug
+    const match = url.match(/\/gallery\/\d+\/([^\/?]+)/);
+    let title = '';
+    if (match && match[1]) {
+      title = match[1]
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+    }
+
+    // 2. Fetch HTML and parse for the first image
     const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36' } });
     if (!res.ok) {
       console.error(`${op}: fetch failed with status ${res.status}`);
@@ -49,28 +60,26 @@ export async function getBehanceMetadata(url: string): Promise<SuggestTagsAndTit
     const html = await res.text();
     const $ = cheerio.load(html);
 
-    const nextDataScript = $('#__NEXT_DATA__').html();
-    if (!nextDataScript) {
-      return { error: 'Could not parse Behance project data. The page structure may have changed.' };
+    let imageUrl = $('img').first().attr('src') || '';
+
+    // If the found URL is relative, make it absolute.
+    if (imageUrl && !imageUrl.startsWith('http')) {
+      const urlObj = new URL(url);
+      imageUrl = new URL(imageUrl, urlObj.origin).href;
     }
-
-    const data = JSON.parse(nextDataScript);
-    const project = data?.props?.pageProps?.project;
-
-    if (!project) {
-      return { error: 'Could not find project data within the Behance page.' };
-    }
-
-    const title = project.name || '';
-    const imageUrl = project.covers?.original || project.covers?.['808'] || project.covers?.['404'] || '';
     
     const output: SuggestTagsAndTitleOutput = {
       title,
-      description: '',
+      description: '', // As requested
       imageUrl,
       tags: [],
     };
     
+    // If we couldn't get a title from the slug, try to get it from the page as a fallback.
+    if (!output.title) {
+        output.title = $('meta[property="og:title"]').attr('content') || $('title').text() || '';
+    }
+
     if (!output.title && !output.imageUrl) {
         return { error: "Could not find any metadata for this Behance project." };
     }
@@ -78,9 +87,6 @@ export async function getBehanceMetadata(url: string): Promise<SuggestTagsAndTit
     return output;
   } catch (error) {
     console.error(`${op}:`, error);
-    if (error instanceof SyntaxError) {
-        return { error: 'Failed to parse JSON data from Behance page.' };
-    }
     return { error: 'An unexpected error occurred while fetching Behance project data.' };
   }
 }
