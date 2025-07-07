@@ -81,7 +81,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           
           allTagNamesInLinks.forEach(name => {
             if (!tagMap.has(name)) {
-              tagMap.set(name, { name, color: undefined });
+              tagMap.set(name, { name });
             }
           });
 
@@ -225,11 +225,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const updateFolder = async (id: string, updates: Partial<Omit<Folder, 'id'>>) => {
     const docRef = getDocRef();
     if (!docRef) throw new Error("User not authenticated or database not configured.");
+
+    const cleanedUpdates = { ...updates };
+    Object.keys(cleanedUpdates).forEach(key => {
+        if ((cleanedUpdates as any)[key] === undefined) {
+            delete (cleanedUpdates as any)[key];
+        }
+    });
+
     const docSnap = await getDoc(docRef);
     if(docSnap.exists()){
       const currentFolders = docSnap.data().folders || [];
       const newFolders = currentFolders.map((folder: Folder) =>
-        folder.id === id ? { ...folder, ...updates } : folder
+        folder.id === id ? { ...folder, ...cleanedUpdates } : folder
       );
       await updateDoc(docRef, { folders: newFolders });
     }
@@ -287,10 +295,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const updateTag = async (name: string, updates: Partial<Omit<Tag, 'name'>>) => {
      const docRef = getDocRef();
      if (!docRef) throw new Error("User not authenticated or database not configured.");
+
+     const cleanedUpdates = { ...updates };
+     Object.keys(cleanedUpdates).forEach(key => {
+        if ((cleanedUpdates as any)[key] === undefined) {
+            delete (cleanedUpdates as any)[key];
+        }
+     });
+
      const docSnap = await getDoc(docRef);
      if(docSnap.exists()){
         const currentTags = docSnap.data().tags || [];
-        const newTags = currentTags.map((tag: Tag) => (tag.name === name ? { ...tag, ...updates } : tag));
+        const newTags = currentTags.map((tag: Tag) => (tag.name === name ? { ...tag, ...cleanedUpdates } : tag));
         await updateDoc(docRef, { tags: newTags });
      }
   };
