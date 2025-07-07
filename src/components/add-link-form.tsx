@@ -12,8 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import type { Link, SuggestTagsAndTitleOutput } from '@/lib/types';
-import { getTweetMetadata, getGenericMetadata, getBehanceMetadata } from '@/lib/actions';
+import type { Link } from '@/lib/types';
+import { suggestTagsAndTitle, type SuggestTagsAndTitleOutput } from '@/ai/flows/suggest-tags-and-title';
 
 const addLinkFormSchema = z.object({
   url: z.string().url({ message: "Please enter a valid URL." }),
@@ -84,26 +84,7 @@ export function AddLinkForm({ onSave, link }: LinkFormProps) {
     form.clearErrors("url");
     
     try {
-      const isTweet = /https?:\/\/(www\.)?(x\.com|twitter\.com)/.test(url);
-      const isBehance = /https?:\/\/(www\.)?behance\.net\/gallery\//.test(url);
-      let result: SuggestTagsAndTitleOutput | { error: string };
-
-      if (isTweet) {
-        result = await getTweetMetadata(url);
-      } else if (isBehance) {
-        result = await getBehanceMetadata(url);
-      } else {
-        result = await getGenericMetadata(url);
-      }
-
-      if ('error' in result) {
-        toast({
-          variant: "destructive",
-          title: "Couldn't fetch details",
-          description: result.error,
-        });
-        return;
-      }
+      const result = await suggestTagsAndTitle({ url });
       
       const hasData = result.title || result.description || result.imageUrl || (result.tags && result.tags.length > 0);
       
@@ -130,7 +111,7 @@ export function AddLinkForm({ onSave, link }: LinkFormProps) {
        toast({
         variant: "destructive",
         title: "Couldn't fetch details",
-        description: "An error occurred while fetching link details. Please try again.",
+        description: "An error occurred while fetching link details. The site may be protected or temporarily unavailable.",
       });
       console.error("Error fetching link metadata:", error);
     } finally {
