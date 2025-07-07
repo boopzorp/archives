@@ -437,12 +437,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <SidebarFooter>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="w-full justify-start gap-2 px-2">
+                        <Button variant="ghost" className="w-full justify-start gap-2 px-2 group-data-[state=collapsed]:justify-center">
                             <Avatar className="h-8 w-8">
                                 <AvatarImage src={user?.photoURL || undefined} alt={username || 'User'} />
                                 <AvatarFallback>{username?.charAt(0).toUpperCase()}</AvatarFallback>
                             </Avatar>
-                            <div className="text-left group-data-[collapsible=icon]:hidden">
+                            <div className="text-left group-data-[state=collapsed]:hidden">
                                 <p className="font-semibold text-sm leading-tight truncate">{username}</p>
                             </div>
                         </Button>
