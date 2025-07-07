@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -18,37 +18,39 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Link as LinkIcon } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-const loginSchema = z.object({
+const forgotPasswordSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
-  password: z.string().min(1, { message: "Password is required." }),
 });
 
-type LoginFormValues = z.infer<typeof loginSchema>;
+type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 
-export default function LoginPage() {
+export default function ForgotPasswordPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const isFirebaseReady = !!auth;
 
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
+  const form = useForm<ForgotPasswordFormValues>({
+    resolver: zodResolver(forgotPasswordSchema),
     defaultValues: {
       email: "",
-      password: "",
     },
   });
 
-  const onSubmit = async (data: LoginFormValues) => {
+  const onSubmit = async (data: ForgotPasswordFormValues) => {
     if (!isFirebaseReady) return;
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
-      router.push('/dashboard');
+      await sendPasswordResetEmail(auth, data.email);
+      toast({
+        title: "Password Reset Email Sent",
+        description: "Please check your inbox to reset your password.",
+      });
+      router.push('/login');
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Login Failed",
+        title: "Error",
         description: error.message || "An unexpected error occurred. Please try again.",
       });
     } finally {
@@ -67,15 +69,15 @@ export default function LoginPage() {
         </div>
         <Card>
           <CardHeader>
-            <CardTitle>Welcome Back!</CardTitle>
-            <CardDescription>Enter your credentials to access your account.</CardDescription>
+            <CardTitle>Forgot Password?</CardTitle>
+            <CardDescription>Enter your email and we'll send you a link to reset your password.</CardDescription>
           </CardHeader>
           <CardContent>
             {!isFirebaseReady && (
               <Alert variant="destructive" className="mb-6">
                 <AlertTitle>Firebase Not Configured</AlertTitle>
                 <AlertDescription>
-                  Please add your Firebase credentials to the <code>.env</code> file to enable login.
+                  Please add your Firebase credentials to the <code>.env</code> file to enable password reset.
                 </AlertDescription>
               </Alert>
             )}
@@ -88,25 +90,7 @@ export default function LoginPage() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="you@example.com" {...field} disabled={!isFirebaseReady} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <div className="flex items-center justify-between">
-                        <FormLabel>Password</FormLabel>
-                        <Link href="/forgot-password" className="text-sm font-medium text-primary hover:underline">
-                          Forgot password?
-                        </Link>
-                      </div>
-                      <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} disabled={!isFirebaseReady}/>
+                        <Input placeholder="you@example.com" {...field} disabled={!isFirebaseReady || isLoading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -114,16 +98,16 @@ export default function LoginPage() {
                 />
                 <Button type="submit" className="w-full" disabled={isLoading || !isFirebaseReady}>
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Log In
+                  Send Reset Link
                 </Button>
               </form>
             </Form>
           </CardContent>
         </Card>
         <p className="mt-4 text-center text-sm text-muted-foreground">
-          Don't have an account?{' '}
-          <Link href="/signup" className="font-medium text-primary hover:underline">
-            Sign up
+          Remembered your password?{' '}
+          <Link href="/login" className="font-medium text-primary hover:underline">
+            Log in
           </Link>
         </p>
       </div>
