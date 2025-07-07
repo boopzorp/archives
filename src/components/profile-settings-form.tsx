@@ -38,18 +38,23 @@ export function ProfileSettingsForm({ onFinished }: { onFinished: () => void }) 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      username: '',
+    },
+  });
+
+  const { reset } = form;
+
   useEffect(() => {
     if (user) {
       setPreviewUrl(user.photoURL || null);
     }
-  }, [user]);
-
-  const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
-      username: username || '',
-    },
-  });
+    if (username) {
+      reset({ username });
+    }
+  }, [user, username, reset]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
