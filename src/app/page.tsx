@@ -69,7 +69,7 @@ export default function LandingPage() {
             <LinkIcon className="h-6 w-6 text-primary" />
             <span className="font-bold text-lg">archives</span>
           </Link>
-          <nav className="flex items-center gap-2 text-sm ml-auto">
+          <nav className="flex items-center gap-4 text-sm ml-auto">
             <ThemeToggle />
             {renderAuthButtons()}
           </nav>
