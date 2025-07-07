@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, WifiOff, Search as SearchIcon, Star, MessageSquare } from 'lucide-react';
+import { Plus, WifiOff, Search as SearchIcon, Star, MessageSquare, AlertCircle } from 'lucide-react';
 import { AppLayout } from '@/components/app-layout';
 import LinkCard from '@/components/link-card';
 import { GraphView } from '@/components/graph-view';
@@ -18,11 +18,14 @@ import { format, isToday, isYesterday, parseISO } from 'date-fns';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useToast } from '@/hooks/use-toast';
+import { auth, db } from '@/lib/firebase';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const isFirebaseReady = !!auth && !!db;
 
   const { searchTerm, links, addLink, updateLink, activeFilter, folders, groupBy, sortBy, loading: dataLoading } = useAppContext();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -40,13 +43,20 @@ function DashboardPage() {
       const { imageUrl, ...formData } = formDataWithImage;
       const tagsArray = formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [];
       
-      const linkData = { ...formData, tags: tagsArray, imageUrl };
+      const linkData: Partial<Link> = { ...formData, tags: tagsArray, imageUrl };
+      
+      // Firestore does not support `undefined`. We must remove any fields that are undefined.
+      Object.keys(linkData).forEach(key => {
+        if ((linkData as any)[key] === undefined) {
+          delete (linkData as any)[key];
+        }
+      });
       
       if (linkId) {
         await updateLink(linkId, linkData);
         setLinkToEdit(null);
       } else {
-        await addLink(linkData);
+        await addLink(linkData as Omit<Link, 'id' | 'createdAt' | 'isFavorite' | 'folderId'>);
         setIsSheetOpen(false);
       }
     } catch (error) {
@@ -178,7 +188,7 @@ function DashboardPage() {
         <div className="flex items-center gap-2">
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
-              <Button>
+              <Button disabled={!isFirebaseReady}>
                 <Plus className="-ml-1 h-5 w-5" />
                 New Link
               </Button>
@@ -195,6 +205,15 @@ function DashboardPage() {
       </header>
 
       <main className="flex-1 p-4 md:p-8">
+        {!isFirebaseReady && (
+            <Alert variant="destructive" className="mb-6">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Firebase Not Configured</AlertTitle>
+                <AlertDescription>
+                Features like saving and editing links are disabled. Please add your Firebase credentials to the <code>.env</code> file to enable all features.
+                </AlertDescription>
+            </Alert>
+        )}
         {activeFilter.type === 'graph' ? (
           <GraphView />
         ) : (
