@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -12,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import type { Link, SuggestTagsAndTitleOutput } from '@/lib/types';
-import { getTweetMetadata, getGenericMetadata } from '@/lib/actions';
+import { getTweetMetadata, getGenericMetadata, getBehanceMetadata } from '@/lib/actions';
 
 const addLinkFormSchema = z.object({
   url: z.string().url({ message: "Please enter a valid URL." }),
@@ -84,10 +85,13 @@ export function AddLinkForm({ onSave, link }: LinkFormProps) {
     
     try {
       const isTweet = /https?:\/\/(www\.)?(x\.com|twitter\.com)/.test(url);
+      const isBehance = /https?:\/\/(www\.)?behance\.net\/gallery\//.test(url);
       let result: SuggestTagsAndTitleOutput | { error: string };
 
       if (isTweet) {
         result = await getTweetMetadata(url);
+      } else if (isBehance) {
+        result = await getBehanceMetadata(url);
       } else {
         result = await getGenericMetadata(url);
       }
