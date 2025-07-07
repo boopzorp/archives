@@ -34,19 +34,34 @@ const updateUserProfile = async (updates: { displayName?: string; photoFile?: Fi
   const photoHasChanged = photoFile || newPhotoUrlInput !== oldPhotoURL;
 
   if (photoHasChanged) {
-    if (photoFile) {
-      // Case 1: A new file was uploaded by the user
-      await uploadBytes(storageRef, photoFile);
-      finalPhotoURL = await getDownloadURL(storageRef);
-    } else if (newPhotoUrlInput && newPhotoUrlInput.startsWith('data:image/')) {
-      // Case 2: A default avatar (data URI) was selected. Upload it to storage.
-      const response = await fetch(newPhotoUrlInput);
-      const blob = await response.blob();
-      await uploadBytes(storageRef, blob, { contentType: blob.type });
-      finalPhotoURL = await getDownloadURL(storageRef);
-    } else {
-      // Case 3: The photo was removed (newPhotoUrlInput is null)
-      finalPhotoURL = newPhotoUrlInput;
+    try {
+      if (photoFile) {
+        // Case 1: A new file was uploaded, overwriting the old one.
+        await uploadBytes(storageRef, photoFile);
+        finalPhotoURL = await getDownloadURL(storageRef);
+      } else if (newPhotoUrlInput && newPhotoUrlInput.startsWith('data:image/')) {
+        // Case 2: A default avatar (data URI) was selected. Upload it to storage, overwriting.
+        const response = await fetch(newPhotoUrlInput);
+        const blob = await response.blob();
+        await uploadBytes(storageRef, blob, { contentType: blob.type });
+        finalPhotoURL = await getDownloadURL(storageRef);
+      } else if (newPhotoUrlInput === null) {
+        // Case 3: The photo was removed.
+        finalPhotoURL = null;
+        // If there was an old photo stored in Firebase Storage, delete it.
+        if (oldPhotoURL && oldPhotoURL.includes('firebasestorage.googleapis.com')) {
+          await deleteObject(storageRef);
+        }
+      } else {
+         // Fallback for any other case
+        finalPhotoURL = newPhotoUrlInput;
+      }
+    } catch (error: any) {
+      if (error.code === 'storage/unauthorized') {
+        throw new Error("Permission denied. Please check your Firebase Storage security rules to allow uploads for authenticated users.");
+      }
+      // Re-throw other storage errors
+      throw error;
     }
   }
 
@@ -68,16 +83,6 @@ const updateUserProfile = async (updates: { displayName?: string; photoFile?: Fi
   }
   if (Object.keys(dbUpdates).length > 0) {
     await updateDoc(userDocRef, dbUpdates);
-  }
-
-  if (oldPhotoURL && oldPhotoURL !== finalPhotoURL && oldPhotoURL.includes('firebasestorage.googleapis.com')) {
-    try {
-      await deleteObject(storageRef);
-    } catch (error: any) {
-      if (error.code !== 'storage/object-not-found') {
-        console.error("Failed to delete old profile picture:", error);
-      }
-    }
   }
 };
 
