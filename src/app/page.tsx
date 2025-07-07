@@ -88,7 +88,10 @@ export default function LandingPage() {
               className="max-w-lg text-lg text-muted-foreground animate-fade-in"
               style={{ animationDelay: '0.4s' }}
             >
-              Tired of endless bookmarks and lost tabs? archives is your fun, ridiculously simple way to save, organize, and actually *find* the cool stuff you discover online.
+              Tired of endless bookmarks and lost tabs?{' '}
+              <span className="font-bold text-primary">archives</span> is your
+              fun, ridiculously simple way to save, organize, and actually{' '}
+              <em>find</em> the cool stuff you discover online.
             </p>
             <div
               className="flex flex-col sm:flex-row gap-4 animate-fade-in"
