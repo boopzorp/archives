@@ -41,7 +41,7 @@ export async function getTweetMetadata(url: string): Promise<SuggestTagsAndTitle
 export async function getBehanceMetadata(url: string): Promise<SuggestTagsAndTitleOutput | { error: string }> {
   const op = 'actions.getBehanceMetadata';
   try {
-    // 1. Title from URL slug
+    // 1. Title from URL slug, as requested.
     const match = url.match(/\/gallery\/\d+\/([^\/?]+)/);
     let title = '';
     if (match && match[1]) {
@@ -51,7 +51,7 @@ export async function getBehanceMetadata(url: string): Promise<SuggestTagsAndTit
         .join(' ');
     }
 
-    // 2. Fetch HTML and parse for the image
+    // 2. Fetch HTML and parse for the image using standard meta tags.
     const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36' } });
     if (!res.ok) {
       console.error(`${op}: fetch failed with status ${res.status}`);
@@ -59,45 +59,34 @@ export async function getBehanceMetadata(url: string): Promise<SuggestTagsAndTit
     }
     const html = await res.text();
     const $ = cheerio.load(html);
-
-    // Try to find the image inside the specific component Behance uses, based on the screenshot.
-    const imageElement = $('a[class*="ImageElement-root"] img').first();
-    let imageUrl = imageElement.attr('src') || '';
     
-    // If src is not found, check srcset as a fallback.
-    if (!imageUrl) {
-      const srcset = imageElement.attr('srcset');
-      if (srcset) {
-        imageUrl = srcset.split(',')[0].trim().split(' ')[0];
-      }
-    }
-    
-    // If the specific selector fails, fall back to the very first image on the page.
-    if (!imageUrl) {
-        imageUrl = $('img').first().attr('src') || '';
-    }
-
+    // Use Open Graph tags for the image, which is the most reliable method.
+    let imageUrl = 
+      $('meta[property="og:image"]').attr('content') ||
+      $('meta[property="og:image:url"]').attr('content') ||
+      '';
 
     // If the found URL is relative, make it absolute.
     if (imageUrl && !imageUrl.startsWith('http')) {
       const urlObj = new URL(url);
       imageUrl = new URL(imageUrl, urlObj.origin).href;
     }
-    
+
     const output: SuggestTagsAndTitleOutput = {
       title,
-      description: '', // As requested
+      description: '', // As requested, no description.
       imageUrl,
       tags: [],
     };
     
-    // If we couldn't get a title from the slug, try to get it from the page as a fallback.
+    // If we couldn't get a title from the slug, try to get it from the page meta tags as a fallback.
     if (!output.title) {
         output.title = $('meta[property="og:title"]').attr('content') || $('title').text() || '';
     }
 
+    // If we still have no title or image, it's a failure.
     if (!output.title && !output.imageUrl) {
-        return { error: "Could not find any metadata for this Behance project." };
+        return { error: "Could not find a title or image for this Behance project." };
     }
 
     return output;
