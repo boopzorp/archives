@@ -31,21 +31,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setLoading(true);
       if (user) {
         setUser(user);
-        // Set username from auth object first as a fallback
-        setUsername(user.displayName || user.email);
-        
-        // Then, try to get the more up-to-date username from Firestore
+        setUsername(user.displayName); // Start with the most immediate info
+
         try {
           const userDocRef = doc(db, 'users', user.uid);
           const userDoc = await getDoc(userDocRef);
           if (userDoc.exists()) {
-            // Update username if it exists in Firestore
             setUsername(userDoc.data().username || user.displayName);
           }
         } catch (error) {
-          // Log the error but don't block the UI or change auth state
           console.error("Could not fetch user profile from Firestore, using fallback.", error);
         }
         
@@ -68,13 +65,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const profileAuthUpdates: { displayName?: string; photoURL?: string } = {};
     const profileDbUpdates: { username?: string; photoURL?: string } = {};
     
-    // Handle display name update
     if (displayName && displayName !== currentUser.displayName) {
       profileAuthUpdates.displayName = displayName;
       profileDbUpdates.username = displayName;
     }
     
-    // Handle photo update
     let newPhotoURL: string | null = currentUser.photoURL;
     
     if (photoFile) {
@@ -84,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const storageRef = ref(storage, `profile-pictures/${currentUser.uid}`);
       await uploadBytes(storageRef, photoFile);
       newPhotoURL = await getDownloadURL(storageRef);
-    } else if (photoURL !== undefined) { // Check for undefined to allow setting null
+    } else if (photoURL !== undefined) {
       newPhotoURL = photoURL;
     }
     
@@ -93,7 +88,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profileDbUpdates.photoURL = newPhotoURL as string;
     }
     
-    // Apply updates if there are any
     if (Object.keys(profileAuthUpdates).length > 0) {
       await updateProfile(currentUser, profileAuthUpdates);
     }
@@ -102,14 +96,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userDocRef = doc(db, 'users', currentUser.uid);
       await updateDoc(userDocRef, profileDbUpdates);
     }
-    
-    // Force re-render with updated info
-    const updatedUser = { ...currentUser, ...profileAuthUpdates };
-    setUser(updatedUser as User);
-
-    if (profileAuthUpdates.displayName) {
-      setUsername(profileAuthUpdates.displayName);
-    }
+    // The onAuthStateChanged listener will automatically pick up the changes.
+    // Manually setting state here can cause race conditions.
   };
 
   const signOut = async () => {
