@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
@@ -30,28 +31,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      try {
-        if (user) {
-          setUser(user);
+      if (user) {
+        setUser(user);
+        // Set username from auth object first as a fallback
+        setUsername(user.displayName || user.email);
+        
+        // Then, try to get the more up-to-date username from Firestore
+        try {
           const userDocRef = doc(db, 'users', user.uid);
           const userDoc = await getDoc(userDocRef);
           if (userDoc.exists()) {
+            // Update username if it exists in Firestore
             setUsername(userDoc.data().username || user.displayName);
-          } else {
-            setUsername(user.displayName || user.email);
           }
-        } else {
-          setUser(null);
-          setUsername(null);
+        } catch (error) {
+          // Log the error but don't block the UI or change auth state
+          console.error("Could not fetch user profile from Firestore, using fallback.", error);
         }
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-        // Reset state on error
+        
+      } else {
         setUser(null);
         setUsername(null);
-      } finally {
-        setLoading(false);
       }
+      setLoading(false);
     });
 
     return () => unsubscribe();
