@@ -92,6 +92,13 @@ function DashboardPage() {
         return link.isFavorite;
       case 'notes':
         return !!link.description?.trim();
+      case 'source':
+        try {
+            const hostname = new URL(link.url).hostname.replace('www.', '');
+            return hostname === activeFilter.value;
+        } catch (e) {
+            return false;
+        }
       default:
         return true;
     }
@@ -163,6 +170,8 @@ function DashboardPage() {
         return folder ? folder.name : 'Folder';
       case 'tag':
         return `#${activeFilter.value}`;
+      case 'source':
+        return activeFilter.value;
       case 'favorites':
         return 'Favorites';
       case 'graph':

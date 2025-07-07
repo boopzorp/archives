@@ -5,12 +5,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import { doc, onSnapshot, updateDoc, arrayUnion, arrayRemove, getDoc, DocumentReference, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from './auth-context';
-import type { Link, Folder, Tag, GroupByOption, SortByOption } from '@/lib/types';
-
-type ActiveFilter = {
-  type: 'all' | 'folder' | 'tag' | 'favorites' | 'graph' | 'notes';
-  value: string | null;
-};
+import type { Link, Folder, Tag, GroupByOption, SortByOption, ActiveFilter } from '@/lib/types';
 
 interface AppContextState {
   loading: boolean;
@@ -20,6 +15,7 @@ interface AppContextState {
   links: Link[];
   folders: Folder[];
   tags: Tag[];
+  sources: string[];
   addLink: (newLink: Omit<Link, 'id' | 'createdAt' | 'isFavorite' | 'folderId'>) => Promise<void>;
   deleteLink: (id: string) => Promise<void>;
   updateLink: (id: string, updates: Partial<Omit<Link, 'id'>>) => Promise<void>;
@@ -47,6 +43,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [links, setLinks] = useState<Link[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [sources, setSources] = useState<string[]>([]);
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>({ type: 'all', value: null });
   const [groupBy, setGroupBy] = useState<GroupByOption>('none');
   const [sortBy, setSortBy] = useState<SortByOption>('newest');
@@ -56,6 +53,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setLinks([]);
       setFolders([]);
       setTags([]);
+      setSources([]);
       setLoading(false);
       setError(null);
       return;
@@ -68,11 +66,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
-          setLinks(data.links || []);
+          const currentLinks = data.links || [];
+          setLinks(currentLinks);
           setFolders(data.folders || []);
           
           const allTagNamesInLinks = new Set<string>();
-          (data.links || []).forEach((link: Link) => {
+          (currentLinks).forEach((link: Link) => {
             link.tags?.forEach(tag => allTagNamesInLinks.add(tag));
           });
 
@@ -94,6 +93,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
           const sortedTags = newTags.sort((a, b) => a.name.localeCompare(b.name));
           setTags(sortedTags);
+          
+          const uniqueSources = [...new Set(currentLinks.map((link: Link) => {
+            try {
+              return new URL(link.url).hostname.replace('www.', '');
+            } catch (e) {
+              return null;
+            }
+          }).filter((s): s is string => !!s))].sort();
+          setSources(uniqueSources);
+
 
           // If tag list changed, update it in firestore
           if(JSON.stringify(sortedTags) !== JSON.stringify(currentTags)) {
@@ -105,6 +114,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             setLinks([]);
             setFolders([]);
             setTags([]);
+            setSources([]);
         }
         setLoading(false);
         setError(null);
@@ -120,6 +130,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setLinks([]);
         setFolders([]);
         setTags([]);
+        setSources([]);
       }
     );
 
@@ -319,6 +330,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     links,
     folders,
     tags,
+    sources,
     addLink,
     deleteLink,
     updateLink,

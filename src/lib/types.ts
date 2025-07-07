@@ -22,6 +22,11 @@ export interface Tag {
   color?: string;
 }
 
+export type ActiveFilter = {
+  type: 'all' | 'folder' | 'tag' | 'favorites' | 'graph' | 'notes' | 'source';
+  value: string | null;
+};
+
 export type GroupByOption = 'none' | 'day' | 'month' | 'year';
 
 export type SortByOption = 'newest' | 'oldest' | 'title-asc' | 'title-desc';

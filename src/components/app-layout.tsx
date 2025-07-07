@@ -2,7 +2,7 @@
 'use client';
 import React, { useState } from 'react';
 import {
-  ArrowDown, ArrowDownAZ, ArrowUp, ArrowUpAZ, BarChart2, ChevronDown, Folder as FolderIcon, MessageSquare, Plus, Search, Star, Tag, MoreHorizontal, User, LogOut,
+  ArrowDown, ArrowDownAZ, ArrowUp, ArrowUpAZ, BarChart2, ChevronDown, Folder as FolderIcon, Globe, MessageSquare, Plus, Search, Star, Tag, MoreHorizontal, User, LogOut,
 } from 'lucide-react';
 import { Sidebar, SidebarProvider, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarFooter, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuAction, SidebarTrigger } from '@/components/ui/sidebar';
 import { Input } from './ui/input';
@@ -36,6 +36,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     searchTerm, setSearchTerm, 
     folders, addFolder, updateFolder, deleteFolder,
     tags, renameTag, updateTag, deleteTag,
+    sources,
     activeFilter, setActiveFilter,
     groupBy, setGroupBy,
     sortBy, setSortBy,
@@ -434,6 +435,24 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
+                    </SidebarMenuItem>
+                  ))}
+              </SidebarMenu>
+            </SidebarGroup>
+            <SidebarGroup>
+              <SidebarGroupLabel>
+                  <span>Sources</span>
+              </SidebarGroupLabel>
+              <SidebarMenu>
+                  {sources.map((source) => (
+                    <SidebarMenuItem key={source}>
+                      <SidebarMenuButton
+                        isActive={activeFilter.type === 'source' && activeFilter.value === source}
+                        onClick={() => setActiveFilter({ type: 'source', value: source })}
+                        tooltip={source}
+                      >
+                         <Globe /><span>{source}</span>
+                      </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
               </SidebarMenu>
