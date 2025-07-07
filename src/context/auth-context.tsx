@@ -29,17 +29,27 @@ const updateUserProfile = async (updates: { displayName?: string; photoFile?: Fi
   const oldPhotoURL = currentUser.photoURL;
   let finalPhotoURL: string | null = oldPhotoURL;
 
-  // Step 1: Handle photo upload if a new file is provided
-  if (photoFile) {
-    const storageRef = ref(storage, `profile-pictures/${currentUser.uid}`);
-    await uploadBytes(storageRef, photoFile);
-    finalPhotoURL = await getDownloadURL(storageRef);
-  } else if (newPhotoUrlInput !== oldPhotoURL) {
-    // This handles selecting a default avatar or removing the photo by setting URL to null
-    finalPhotoURL = newPhotoUrlInput;
+  const storageRef = ref(storage, `profile-pictures/${currentUser.uid}`);
+
+  const photoHasChanged = photoFile || newPhotoUrlInput !== oldPhotoURL;
+
+  if (photoHasChanged) {
+    if (photoFile) {
+      // Case 1: A new file was uploaded by the user
+      await uploadBytes(storageRef, photoFile);
+      finalPhotoURL = await getDownloadURL(storageRef);
+    } else if (newPhotoUrlInput && newPhotoUrlInput.startsWith('data:image/')) {
+      // Case 2: A default avatar (data URI) was selected. Upload it to storage.
+      const response = await fetch(newPhotoUrlInput);
+      const blob = await response.blob();
+      await uploadBytes(storageRef, blob, { contentType: blob.type });
+      finalPhotoURL = await getDownloadURL(storageRef);
+    } else {
+      // Case 3: The photo was removed (newPhotoUrlInput is null)
+      finalPhotoURL = newPhotoUrlInput;
+    }
   }
 
-  // Step 2: Prepare updates for Auth and Firestore
   const authUpdates: { displayName?: string; photoURL?: string | null } = {};
   const dbUpdates: { username?: string; photoURL?: string | null } = {};
 
@@ -47,13 +57,12 @@ const updateUserProfile = async (updates: { displayName?: string; photoFile?: Fi
     authUpdates.displayName = displayName;
     dbUpdates.username = displayName;
   }
-  // Use hasOwnProperty because finalPhotoURL could be null, which is a valid update
+  
   if (finalPhotoURL !== oldPhotoURL) {
     authUpdates.photoURL = finalPhotoURL;
     dbUpdates.photoURL = finalPhotoURL;
   }
 
-  // Step 3: Apply updates to Firebase Auth and Firestore if there are any changes
   if (Object.keys(authUpdates).length > 0) {
     await updateProfile(currentUser, authUpdates);
   }
@@ -61,20 +70,17 @@ const updateUserProfile = async (updates: { displayName?: string; photoFile?: Fi
     await updateDoc(userDocRef, dbUpdates);
   }
 
-  // Step 4: Delete old photo from storage if it was replaced or removed
-  // and it was a file we stored (not a default avatar or null).
   if (oldPhotoURL && oldPhotoURL !== finalPhotoURL && oldPhotoURL.includes('firebasestorage.googleapis.com')) {
-    const oldStorageRef = ref(storage, `profile-pictures/${currentUser.uid}`);
     try {
-      await deleteObject(oldStorageRef);
+      await deleteObject(storageRef);
     } catch (error: any) {
-      // It's okay if the object doesn't exist, log other errors.
       if (error.code !== 'storage/object-not-found') {
         console.error("Failed to delete old profile picture:", error);
       }
     }
   }
 };
+
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
