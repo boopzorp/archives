@@ -5,7 +5,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { onAuthStateChanged, User, signOut as firebaseSignOut, updateProfile } from 'firebase/auth';
 import { auth, db, storage } from '@/lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
@@ -31,19 +31,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setLoading(true);
       if (user) {
+        // Set user immediately to reduce perceived loading time
         setUser(user);
-        setUsername(user.displayName); // Start with the most immediate info
-
+        setUsername(user.displayName);
+        
         try {
           const userDocRef = doc(db, 'users', user.uid);
           const userDoc = await getDoc(userDocRef);
           if (userDoc.exists()) {
-            setUsername(userDoc.data().username || user.displayName);
+            const data = userDoc.data();
+            // Use username from DB if it exists, otherwise fallback to auth display name
+            setUsername(data.username || user.displayName);
+          } else {
+             // This case might happen on first signup if DB write is slow
+             console.log("User document doesn't exist yet, using displayName from auth.");
           }
         } catch (error) {
-          console.error("Could not fetch user profile from Firestore, using fallback.", error);
+          console.error("Error fetching user profile from Firestore:", error);
         }
         
       } else {
@@ -65,12 +70,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const profileAuthUpdates: { displayName?: string; photoURL?: string | null } = {};
     const profileDbUpdates: { username?: string; photoURL?: string | null } = {};
     
-    if (displayName && displayName !== currentUser.displayName) {
+    if (displayName && displayName !== username) {
       profileAuthUpdates.displayName = displayName;
       profileDbUpdates.username = displayName;
     }
     
-    let newPhotoURL: string | null = currentUser.photoURL;
+    let finalPhotoURL: string | null = currentUser.photoURL;
     
     if (photoFile) {
       if (!storage) {
@@ -78,14 +83,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       const storageRef = ref(storage, `profile-pictures/${currentUser.uid}`);
       await uploadBytes(storageRef, photoFile);
-      newPhotoURL = await getDownloadURL(storageRef);
+      finalPhotoURL = await getDownloadURL(storageRef);
     } else if (photoURL !== undefined) {
-      newPhotoURL = photoURL;
+      finalPhotoURL = photoURL;
+      
+      // If we are removing the photo (setting URL to null) and there was a storage-backed picture before, delete it.
+      if (finalPhotoURL === null && currentUser.photoURL?.includes('firebasestorage')) {
+         if (!storage) {
+          throw new Error("Firebase Storage is not configured.");
+        }
+        const storageRef = ref(storage, `profile-pictures/${currentUser.uid}`);
+        try {
+            await deleteObject(storageRef);
+        } catch(error: any) {
+            // It's okay if the object doesn't exist, we can ignore that error.
+            if (error.code !== 'storage/object-not-found') {
+                console.error("Failed to delete profile picture from storage", error);
+                // We don't re-throw here, as we can still update the profile URL in Auth/DB.
+            }
+        }
+      }
     }
     
-    if (newPhotoURL !== currentUser.photoURL) {
-      profileAuthUpdates.photoURL = newPhotoURL;
-      profileDbUpdates.photoURL = newPhotoURL;
+    if (finalPhotoURL !== currentUser.photoURL) {
+      profileAuthUpdates.photoURL = finalPhotoURL;
+      profileDbUpdates.photoURL = finalPhotoURL;
     }
     
     if (Object.keys(profileAuthUpdates).length > 0) {
@@ -96,7 +118,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userDocRef = doc(db, 'users', currentUser.uid);
       await updateDoc(userDocRef, profileDbUpdates);
     }
-    // The onAuthStateChanged listener will automatically pick up the changes.
   };
 
   const signOut = async () => {
