@@ -14,7 +14,7 @@ import { useAppContext } from '@/context/app-context';
 import { useAuth } from '@/context/auth-context';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from './ui/dropdown-menu';
 import type { Folder, Tag as TagType, GroupByOption, SortByOption } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { cn, getBrandName } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useRouter } from 'next/navigation';
 import { ProfileSettingsForm } from './profile-settings-form';
@@ -449,9 +449,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       <SidebarMenuButton
                         isActive={activeFilter.type === 'source' && activeFilter.value === source}
                         onClick={() => setActiveFilter({ type: 'source', value: source })}
-                        tooltip={source}
+                        tooltip={getBrandName(source)}
                       >
-                         <Globe /><span>{source}</span>
+                         <Globe /><span>{getBrandName(source)}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}

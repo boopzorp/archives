@@ -15,7 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 import type { Link } from "@/lib/types";
-import { cn } from '@/lib/utils';
+import { cn, getBrandName } from '@/lib/utils';
 import { useAppContext } from '@/context/app-context';
 import { useMemo } from 'react';
 import { useToast } from "@/hooks/use-toast";
@@ -23,42 +23,6 @@ import { useToast } from "@/hooks/use-toast";
 interface LinkCardProps {
   link: Link;
   onEdit: (link: Link) => void;
-}
-
-function getBrandName(url: string): string {
-  try {
-    const hostname = new URL(url).hostname.replace('www.', '');
-
-    const specialCases: { [key: string]: string } = {
-      'x.com': 'X',
-      'newyorker.com': 'The New Yorker',
-      'github.com': 'GitHub',
-      'youtube.com': 'YouTube',
-      'youtu.be': 'YouTube',
-      'vimeo.com': 'Vimeo',
-      'behance.net': 'Behance',
-      'dribbble.com': 'Dribbble',
-      'medium.com': 'Medium',
-      'substack.com': 'Substack',
-      'figma.com': 'Figma',
-      'producthunt.com': 'Product Hunt',
-      'techcrunch.com': 'TechCrunch',
-      'theverge.com': 'The Verge',
-      'nytimes.com': 'The New York Times',
-    };
-
-    for (const key in specialCases) {
-      if (hostname.endsWith(key)) {
-        return specialCases[key];
-      }
-    }
-
-    const domainParts = hostname.split('.');
-    const mainPart = domainParts[0];
-    return mainPart.charAt(0).toUpperCase() + mainPart.slice(1);
-  } catch (e) {
-    return '';
-  }
 }
 
 export default function LinkCard({ link, onEdit }: LinkCardProps) {

@@ -20,6 +20,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { useToast } from '@/hooks/use-toast';
 import { auth, db } from '@/lib/firebase';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { getBrandName } from '@/lib/utils';
 
 function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
@@ -171,7 +172,7 @@ function DashboardPage() {
       case 'tag':
         return `#${activeFilter.value}`;
       case 'source':
-        return activeFilter.value;
+        return activeFilter.value ? getBrandName(activeFilter.value) : 'Source';
       case 'favorites':
         return 'Favorites';
       case 'graph':
