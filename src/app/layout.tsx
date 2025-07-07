@@ -2,9 +2,11 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { cn } from '@/lib/utils';
+import { AuthProvider } from '@/context/auth-context';
+import { AppProvider } from '@/context/app-context';
 
 export const metadata: Metadata = {
-  title: 'Archives',
+  title: 'Linkflow',
   description: 'A cross platform link archive app',
 };
 
@@ -21,8 +23,12 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
       </head>
       <body className={cn("font-body antialiased")}>
-        {children}
-        <Toaster />
+        <AuthProvider>
+          <AppProvider>
+            {children}
+            <Toaster />
+          </AppProvider>
+        </AuthProvider>
       </body>
     </html>
   );

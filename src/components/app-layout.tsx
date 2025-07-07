@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import {
-  ArrowDown, ArrowDownAZ, ArrowUp, ArrowUpAZ, BarChart2, ChevronDown, Folder as FolderIcon, MessageSquare, Plus, Search, Star, Tag, MoreHorizontal,
+  ArrowDown, ArrowDownAZ, ArrowUp, ArrowUpAZ, BarChart2, ChevronDown, Folder as FolderIcon, MessageSquare, Plus, Search, Star, Tag, MoreHorizontal, User, LogOut,
 } from 'lucide-react';
 import { Sidebar, SidebarProvider, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuAction, SidebarTrigger } from '@/components/ui/sidebar';
 import { Input } from './ui/input';
@@ -10,9 +10,12 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { Label } from './ui/label';
 import { useAppContext } from '@/context/app-context';
+import { useAuth } from '@/context/auth-context';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from './ui/dropdown-menu';
 import type { Folder, Tag as TagType, GroupByOption, SortByOption } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback } from './ui/avatar';
+import { useRouter } from 'next/navigation';
 
 const paletteColors = [
   '#fca5a5', '#fdba74', '#fde047', '#bef264', '#86efac', '#67e8f9', 
@@ -22,6 +25,9 @@ const paletteColors = [
 
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
+  const { user, username, signOut } = useAuth();
+  const router = useRouter();
+
   const { 
     searchTerm, setSearchTerm, 
     folders, addFolder, updateFolder, deleteFolder,
@@ -43,11 +49,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [renamedTagName, setRenamedTagName] = useState('');
   const [tagToDelete, setTagToDelete] = useState<TagType | null>(null);
 
+  const handleSignOut = async () => {
+    await signOut();
+    router.push('/login');
+  };
 
-  const handleAddFolder = (e: React.FormEvent) => {
+  const handleAddFolder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newFolderName.trim()) {
-      addFolder(newFolderName.trim());
+      await addFolder(newFolderName.trim());
       setNewFolderName('');
       setIsFolderDialogOpen(false);
     }
@@ -63,14 +73,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const handleRenameItem = (e: React.FormEvent) => {
+  const handleRenameItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (folderToRename && renamedFolderName.trim()) {
-      updateFolder(folderToRename.id, { name: renamedFolderName.trim() });
+      await updateFolder(folderToRename.id, { name: renamedFolderName.trim() });
       setFolderToRename(null);
       setRenamedFolderName('');
     } else if (tagToRename && renamedTagName.trim()) {
-      renameTag(tagToRename.name, renamedTagName.trim());
+      await renameTag(tagToRename.name, renamedTagName.trim());
       setTagToRename(null);
       setRenamedTagName('');
     }
@@ -84,21 +94,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const handleDeleteItem = () => {
+  const handleDeleteItem = async () => {
     if (folderToDelete) {
-      deleteFolder(folderToDelete.id);
+      await deleteFolder(folderToDelete.id);
       setFolderToDelete(null);
     } else if (tagToDelete) {
-      deleteTag(tagToDelete.name);
+      await deleteTag(tagToDelete.name);
       setTagToDelete(null);
     }
   };
 
-  const handleSetItemColor = (id: string, color: string, type: 'folder' | 'tag') => {
+  const handleSetItemColor = async (id: string, color: string, type: 'folder' | 'tag') => {
     if (type === 'folder') {
-      updateFolder(id, { color });
+      await updateFolder(id, { color });
     } else {
-      updateTag(id, { color });
+      await updateTag(id, { color });
     }
   };
   
@@ -129,7 +139,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
         <Sidebar collapsible="icon" className="bg-card border-r">
           <SidebarHeader className='p-4 flex items-center justify-between group-data-[state=collapsed]:justify-center'>
-            <h1 className="text-2xl font-bold text-primary tracking-tighter group-data-[state=collapsed]:hidden">Archives</h1>
+            <h1 className="text-2xl font-bold text-primary tracking-tighter group-data-[state=collapsed]:hidden">Linkflow</h1>
             <SidebarTrigger className="hidden md:flex" />
           </SidebarHeader>
           <SidebarContent>
@@ -381,6 +391,33 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </SidebarMenu>
             </SidebarGroup>
           </SidebarContent>
+            <SidebarFooter>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="w-full justify-start gap-2 px-2">
+                            <Avatar className="h-8 w-8">
+                                <AvatarFallback>{username?.charAt(0).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <div className="text-left group-data-[collapsible=icon]:hidden">
+                                <p className="font-semibold text-sm leading-tight">{username}</p>
+                                <p className="text-xs text-muted-foreground">{user?.email}</p>
+                            </div>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" side="right" className="w-56 mb-2">
+                        <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem disabled>
+                            <User className="mr-2 h-4 w-4" />
+                            <span>Profile</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleSignOut}>
+                            <LogOut className="mr-2 h-4 w-4" />
+                            <span>Log out</span>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </SidebarFooter>
         </Sidebar>
         <SidebarInset>
           {children}

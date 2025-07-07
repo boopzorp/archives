@@ -1,7 +1,9 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { doc, onSnapshot, updateDoc, arrayUnion, arrayRemove, getDoc, DocumentReference, DocumentData } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useAuth } from './auth-context';
 import type { Link, Folder, Tag, GroupByOption, SortByOption } from '@/lib/types';
 
 type ActiveFilter = {
@@ -10,20 +12,21 @@ type ActiveFilter = {
 };
 
 interface AppContextState {
+  loading: boolean;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   links: Link[];
   folders: Folder[];
   tags: Tag[];
-  addLink: (newLink: Omit<Link, 'id' | 'createdAt' | 'isFavorite' | 'folderId'>) => void;
-  deleteLink: (id: string) => void;
-  updateLink: (id: string, updates: Partial<Omit<Link, 'id'>>) => void;
-  addFolder: (name: string) => void;
-  deleteFolder: (id: string) => void;
-  updateFolder: (id: string, updates: Partial<Omit<Folder, 'id'>>) => void;
-  renameTag: (oldName: string, newName: string) => void;
-  deleteTag: (name: string) => void;
-  updateTag: (name: string, updates: Partial<Omit<Tag, 'name'>>) => void;
+  addLink: (newLink: Omit<Link, 'id' | 'createdAt' | 'isFavorite' | 'folderId'>) => Promise<void>;
+  deleteLink: (id: string) => Promise<void>;
+  updateLink: (id: string, updates: Partial<Omit<Link, 'id'>>) => Promise<void>;
+  addFolder: (name: string) => Promise<void>;
+  deleteFolder: (id: string) => Promise<void>;
+  updateFolder: (id: string, updates: Partial<Omit<Folder, 'id'>>) => Promise<void>;
+  renameTag: (oldName: string, newName: string) => Promise<void>;
+  deleteTag: (name: string) => Promise<void>;
+  updateTag: (name: string, updates: Partial<Omit<Tag, 'name'>>) => Promise<void>;
   activeFilter: ActiveFilter;
   setActiveFilter: (filter: ActiveFilter) => void;
   groupBy: GroupByOption;
@@ -35,7 +38,8 @@ interface AppContextState {
 const AppContext = createContext<AppContextState | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [isClient, setIsClient] = useState(false);
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [links, setLinks] = useState<Link[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -45,71 +49,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [sortBy, setSortBy] = useState<SortByOption>('newest');
 
   useEffect(() => {
-    setIsClient(true);
-    try {
-      const storedLinks = localStorage.getItem('archives_links');
-      if (storedLinks) setLinks(JSON.parse(storedLinks));
-      
-      const storedFolders = localStorage.getItem('archives_folders');
-      if (storedFolders) setFolders(JSON.parse(storedFolders));
-
-      const storedTags = localStorage.getItem('archives_tags');
-      if (storedTags) setTags(JSON.parse(storedTags));
-    } catch (error) {
-      console.error("Failed to parse data from localStorage", error);
+    if (!user || !db) {
+      setLinks([]);
+      setFolders([]);
+      setTags([]);
+      setLoading(false);
+      return;
     }
-  }, []);
 
-  useEffect(() => {
-    if (isClient) {
-      try {
-        localStorage.setItem('archives_links', JSON.stringify(links));
-      } catch (error) {
-        console.error("Failed to save links to localStorage", error);
-      }
-    }
-  }, [links, isClient]);
-
-  useEffect(() => {
-    if (isClient) {
-      try {
-        localStorage.setItem('archives_folders', JSON.stringify(folders));
-      } catch (error) {
-        console.error("Failed to save folders to localStorage", error);
-      }
-    }
-  }, [folders, isClient]);
-
-  useEffect(() => {
-    if (isClient) {
-      try {
-        localStorage.setItem('archives_tags', JSON.stringify(tags));
-      } catch (error) {
-        console.error("Failed to save tags to localStorage", error);
-      }
-    }
-  }, [tags, isClient]);
-  
-  useEffect(() => {
-    if (isClient) {
-      // Get all unique tag names from links
-      const allTagNamesInLinks = new Set<string>();
-      links.forEach(link => {
-        link.tags?.forEach(tag => allTagNamesInLinks.add(tag));
-      });
-
-      // Reconcile the managed tags state
-      setTags(prevTags => {
-        const tagMap = new Map(prevTags.map(t => [t.name, t]));
+    setLoading(true);
+    const userDocRef = doc(db, 'users', user.uid);
+    const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setLinks(data.links || []);
+        setFolders(data.folders || []);
         
-        // Add any new tags found in links
+        const allTagNamesInLinks = new Set<string>();
+        (data.links || []).forEach((link: Link) => {
+          link.tags?.forEach(tag => allTagNamesInLinks.add(tag));
+        });
+
+        const currentTags = data.tags || [];
+        const tagMap = new Map(currentTags.map((t: Tag) => [t.name, t]));
+        
         allTagNamesInLinks.forEach(name => {
           if (!tagMap.has(name)) {
             tagMap.set(name, { name, color: undefined });
           }
         });
 
-        // Create a new array, filtering out tags that are no longer in any link
         const newTags: Tag[] = [];
         tagMap.forEach((tag, name) => {
           if (allTagNamesInLinks.has(name)) {
@@ -117,107 +86,173 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
         });
 
-        // Only update state if there's a change in length or content
-        if (newTags.length !== prevTags.length || !newTags.every((v, i) => v === prevTags[i])) {
-            return newTags.sort((a, b) => a.name.localeCompare(b.name));
+        const sortedTags = newTags.sort((a, b) => a.name.localeCompare(b.name));
+        setTags(sortedTags);
+
+        // If tag list changed, update it in firestore
+        if(JSON.stringify(sortedTags) !== JSON.stringify(currentTags)) {
+          updateDoc(userDocRef, { tags: sortedTags });
         }
-        return prevTags;
-      });
-    }
-  }, [links, isClient]);
+      }
+      setLoading(false);
+    });
 
+    return () => unsubscribe();
+  }, [user]);
 
-  const addLink = (newLink: Omit<Link, 'id' | 'createdAt' | 'isFavorite' | 'folderId'>) => {
+  const getDocRef = (): DocumentReference<DocumentData> | null => {
+    if (!user || !db) return null;
+    return doc(db, 'users', user.uid);
+  };
+  
+  const addLink = async (newLinkData: Omit<Link, 'id' | 'createdAt' | 'isFavorite' | 'folderId'>) => {
+    const docRef = getDocRef();
+    if (!docRef) return;
     const linkWithMeta: Link = {
-      ...newLink,
-      id: new Date().toISOString(),
+      ...newLinkData,
+      id: new Date().toISOString() + Math.random().toString(36).substr(2, 9),
       createdAt: new Date().toISOString(),
       isFavorite: false,
       folderId: null,
     };
-    setLinks(prevLinks => [linkWithMeta, ...prevLinks]);
+    await updateDoc(docRef, { links: arrayUnion(linkWithMeta) });
   };
 
-  const deleteLink = (id: string) => {
-    setLinks(prevLinks => prevLinks.filter(link => link.id !== id));
+  const deleteLink = async (id: string) => {
+    const docRef = getDocRef();
+    if (!docRef) return;
+    const docSnap = await getDoc(docRef);
+    if(docSnap.exists()){
+      const currentLinks = docSnap.data().links || [];
+      const linkToDelete = currentLinks.find((l: Link) => l.id === id);
+      if(linkToDelete) {
+        await updateDoc(docRef, { links: arrayRemove(linkToDelete) });
+      }
+    }
   };
 
-  const updateLink = (id: string, updates: Partial<Omit<Link, 'id'>>) => {
-    setLinks(prevLinks => 
-      prevLinks.map(link => 
+  const updateLink = async (id: string, updates: Partial<Omit<Link, 'id'>>) => {
+    const docRef = getDocRef();
+    if (!docRef) return;
+    const docSnap = await getDoc(docRef);
+     if(docSnap.exists()){
+      const currentLinks = docSnap.data().links || [];
+      const newLinks = currentLinks.map((link: Link) => 
         link.id === id ? { ...link, ...updates } : link
-      )
-    );
+      );
+      await updateDoc(docRef, { links: newLinks });
+    }
   };
   
-  const addFolder = (name: string) => {
+  const addFolder = async (name: string) => {
+    const docRef = getDocRef();
+    if (!docRef) return;
     const newFolder: Folder = {
-      id: new Date().toISOString(),
+      id: new Date().toISOString() + Math.random().toString(36).substr(2, 9),
       name,
     };
-    setFolders(prevFolders => [...prevFolders, newFolder]);
+    await updateDoc(docRef, { folders: arrayUnion(newFolder) });
   };
   
-  const deleteFolder = (id: string) => {
-    setFolders(prevFolders => prevFolders.filter(folder => folder.id !== id));
-    setLinks(prevLinks =>
-      prevLinks.map(link =>
+  const deleteFolder = async (id: string) => {
+    const docRef = getDocRef();
+    if (!docRef) return;
+    const docSnap = await getDoc(docRef);
+    if(docSnap.exists()){
+      const currentFolders = docSnap.data().folders || [];
+      const folderToDelete = currentFolders.find((f: Folder) => f.id === id);
+      if (folderToDelete) {
+         await updateDoc(docRef, { folders: arrayRemove(folderToDelete) });
+      }
+
+      // Unassign links from the deleted folder
+      const currentLinks = docSnap.data().links || [];
+      const newLinks = currentLinks.map((link: Link) =>
         link.folderId === id ? { ...link, folderId: null } : link
-      )
-    );
+      );
+      await updateDoc(docRef, { links: newLinks });
+    }
+
     if (activeFilter.type === 'folder' && activeFilter.value === id) {
       setActiveFilter({ type: 'all', value: null });
     }
   };
 
-  const updateFolder = (id: string, updates: Partial<Omit<Folder, 'id'>>) => {
-    setFolders(prevFolders =>
-      prevFolders.map(folder =>
+  const updateFolder = async (id: string, updates: Partial<Omit<Folder, 'id'>>) => {
+    const docRef = getDocRef();
+    if (!docRef) return;
+    const docSnap = await getDoc(docRef);
+    if(docSnap.exists()){
+      const currentFolders = docSnap.data().folders || [];
+      const newFolders = currentFolders.map((folder: Folder) =>
         folder.id === id ? { ...folder, ...updates } : folder
-      )
-    );
+      );
+      await updateDoc(docRef, { folders: newFolders });
+    }
   };
   
-  const renameTag = (oldName: string, newName: string) => {
-    if (tags.some(t => t.name === newName)) {
-      console.error(`Tag "${newName}" already exists.`);
-      // In a real app, you'd show a toast notification here.
-      return;
+  const renameTag = async (oldName: string, newName: string) => {
+    const docRef = getDocRef();
+    if (!docRef) return;
+    const docSnap = await getDoc(docRef);
+    if(docSnap.exists()){
+        const currentTags = docSnap.data().tags || [];
+        if (currentTags.some((t: Tag) => t.name === newName)) {
+            console.error(`Tag "${newName}" already exists.`);
+            return;
+        }
+
+        const newTags = currentTags.map((tag: Tag) => (tag.name === oldName ? { ...tag, name: newName } : tag));
+        const currentLinks = docSnap.data().links || [];
+        const newLinks = currentLinks.map((link: Link) => ({
+            ...link,
+            tags: link.tags.map(t => (t === oldName ? newName : t)),
+        }));
+        await updateDoc(docRef, { tags: newTags, links: newLinks });
     }
-    setTags(prevTags =>
-      prevTags.map(tag => (tag.name === oldName ? { ...tag, name: newName } : tag))
-    );
-    setLinks(prevLinks =>
-      prevLinks.map(link => ({
-        ...link,
-        tags: link.tags.map(t => (t === oldName ? newName : t)),
-      }))
-    );
+  
     if (activeFilter.type === 'tag' && activeFilter.value === oldName) {
       setActiveFilter({ type: 'tag', value: newName });
     }
   };
 
-  const deleteTag = (name: string) => {
-    setTags(prevTags => prevTags.filter(tag => tag.name !== name));
-    setLinks(prevLinks =>
-      prevLinks.map(link => ({
-        ...link,
-        tags: link.tags.filter(t => t !== name),
-      }))
-    );
+  const deleteTag = async (name: string) => {
+    const docRef = getDocRef();
+    if (!docRef) return;
+    const docSnap = await getDoc(docRef);
+    if(docSnap.exists()){
+        const currentTags = docSnap.data().tags || [];
+        const tagToDelete = currentTags.find((t: Tag) => t.name === name);
+        if(tagToDelete) {
+            await updateDoc(docRef, { tags: arrayRemove(tagToDelete) });
+        }
+        
+        const currentLinks = docSnap.data().links || [];
+        const newLinks = currentLinks.map((link: Link) => ({
+            ...link,
+            tags: link.tags.filter(t => t !== name),
+        }));
+        await updateDoc(docRef, { links: newLinks });
+    }
+    
     if (activeFilter.type === 'tag' && activeFilter.value === name) {
       setActiveFilter({ type: 'all', value: null });
     }
   };
   
-  const updateTag = (name: string, updates: Partial<Omit<Tag, 'name'>>) => {
-    setTags(prevTags =>
-      prevTags.map(tag => (tag.name === name ? { ...tag, ...updates } : tag))
-    );
+  const updateTag = async (name: string, updates: Partial<Omit<Tag, 'name'>>) => {
+     const docRef = getDocRef();
+     if (!docRef) return;
+     const docSnap = await getDoc(docRef);
+     if(docSnap.exists()){
+        const currentTags = docSnap.data().tags || [];
+        const newTags = currentTags.map((tag: Tag) => (tag.name === name ? { ...tag, ...updates } : tag));
+        await updateDoc(docRef, { tags: newTags });
+     }
   };
 
   const value = {
+    loading,
     searchTerm,
     setSearchTerm,
     links,

@@ -1,276 +1,102 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { Plus, WifiOff, Settings, Search as SearchIcon, Star, MessageSquare } from 'lucide-react';
-import { AppLayout } from '@/components/app-layout';
-import LinkCard from '@/components/link-card';
-import { GraphView } from '@/components/graph-view';
-import { AddLinkForm, AddLinkFormValues } from '@/components/add-link-form';
+import Link from 'next/link';
+import { ArrowRight, Link as LinkIcon, Star, Folder } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import type { Link } from '@/lib/types';
-import { AppProvider, useAppContext } from '@/context/app-context';
-import { format, isToday, isYesterday, parseISO } from 'date-fns';
-import { SidebarTrigger } from '@/components/ui/sidebar';
+import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
-function HomePage() {
-  const { searchTerm, links, addLink, updateLink, activeFilter, folders, groupBy, sortBy } = useAppContext();
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
-  const [linkToEdit, setLinkToEdit] = useState<Link | null>(null);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  const handleSaveLink = (formDataWithImage: AddLinkFormValues & { imageUrl?: string }, linkId?: string) => {
-    const { imageUrl, ...formData } = formDataWithImage;
-    const tagsArray = formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [];
-    
-    const linkData = { ...formData, tags: tagsArray, imageUrl };
-    
-    if (linkId) {
-      updateLink(linkId, linkData);
-      setLinkToEdit(null);
-    } else {
-      addLink(linkData);
-      setIsSheetOpen(false);
-    }
-  };
-
-  const filteredBySearch = useMemo(() => links.filter(link => {
-    if (!searchTerm) return true;
-    const lowercasedTerm = searchTerm.toLowerCase();
-    return (
-      link.title.toLowerCase().includes(lowercasedTerm) ||
-      (link.description && link.description.toLowerCase().includes(lowercasedTerm)) ||
-      link.url.toLowerCase().includes(lowercasedTerm) ||
-      link.tags.some(tag => tag.toLowerCase().includes(lowercasedTerm))
-    )
-  }), [links, searchTerm]);
-
-  const filteredLinks = useMemo(() => filteredBySearch.filter(link => {
-    switch (activeFilter.type) {
-      case 'all':
-        return true;
-      case 'folder':
-        return link.folderId === activeFilter.value;
-      case 'tag':
-        return link.tags.includes(activeFilter.value!);
-      case 'favorites':
-        return link.isFavorite;
-      case 'notes':
-        return !!link.description?.trim();
-      default:
-        return true;
-    }
-  }), [filteredBySearch, activeFilter]);
-  
-  const sortedLinks = useMemo(() => {
-    const sorted = [...filteredLinks];
-    switch (sortBy) {
-      case 'newest':
-        sorted.sort((a, b) => parseISO(b.createdAt).getTime() - parseISO(a.createdAt).getTime());
-        break;
-      case 'oldest':
-        sorted.sort((a, b) => parseISO(a.createdAt).getTime() - parseISO(b.createdAt).getTime());
-        break;
-      case 'title-asc':
-        sorted.sort((a, b) => a.title.localeCompare(b.title));
-        break;
-      case 'title-desc':
-        sorted.sort((a, b) => b.title.localeCompare(a.title));
-        break;
-      default:
-        break;
-    }
-    return sorted;
-  }, [filteredLinks, sortBy]);
-
-  const groupedAndFilteredLinks = useMemo(() => {
-    if (groupBy === 'none' || sortedLinks.length === 0) {
-      return [{ groupTitle: null, links: sortedLinks }];
-    }
-
-    const groups: { groupTitle: string; links: Link[] }[] = [];
-    const groupMap = new Map<string, Link[]>();
-
-    for (const link of sortedLinks) {
-      const date = parseISO(link.createdAt);
-      let groupKey = '';
-
-      if (groupBy === 'day') {
-        if (isToday(date)) groupKey = 'Today';
-        else if (isYesterday(date)) groupKey = 'Yesterday';
-        else groupKey = format(date, 'MMMM d, yyyy');
-      } else if (groupBy === 'month') {
-        groupKey = format(date, 'MMMM yyyy');
-      } else if (groupBy === 'year') {
-        groupKey = format(date, 'yyyy');
-      }
-
-      if (groupKey) {
-        if (!groupMap.has(groupKey)) {
-          const newGroupLinks: Link[] = [];
-          groupMap.set(groupKey, newGroupLinks);
-          groups.push({ groupTitle: groupKey, links: newGroupLinks });
-        }
-        groupMap.get(groupKey)!.push(link);
-      }
-    }
-    
-    return groups;
-  }, [sortedLinks, groupBy]);
-
-
-  const getHeaderTitle = () => {
-    switch (activeFilter.type) {
-      case 'all':
-        return 'All';
-      case 'folder':
-        const folder = folders.find(f => f.id === activeFilter.value);
-        return folder ? folder.name : 'Folder';
-      case 'tag':
-        return `#${activeFilter.value}`;
-      case 'favorites':
-        return 'Favorites';
-      case 'graph':
-        return 'Graph View';
-      case 'notes':
-        return 'Notes';
-      default:
-        return 'All';
-    }
-  };
-
-  if (!isMounted) {
-     return (
-      <AppLayout>
-        <header className="flex items-center justify-between p-4 border-b bg-card">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 bg-muted rounded-md animate-pulse md:hidden" />
-            <div className="h-8 w-32 bg-muted rounded-md animate-pulse" />
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="h-10 w-28 bg-muted rounded-md animate-pulse" />
-            <div className="h-10 w-36 bg-muted rounded-md animate-pulse hidden md:flex" />
-            <div className="h-10 w-10 bg-muted rounded-md animate-pulse" />
-          </div>
-        </header>
-        <main className="p-4 md:p-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="space-y-2">
-                <div className="aspect-video w-full bg-muted rounded-md animate-pulse"></div>
-                <div className="h-5 w-3/4 bg-muted rounded-md animate-pulse mt-4"></div>
-                <div className="h-4 w-1/2 bg-muted rounded-md animate-pulse"></div>
-              </div>
-            ))}
-          </div>
-        </main>
-      </AppLayout>
-    );
-  }
-
+export default function LandingPage() {
   return (
-    <AppLayout>
-      <header className="flex items-center justify-between p-4 border-b bg-card">
-        <div className="flex items-center gap-2">
-          <SidebarTrigger className="md:hidden" />
-          <h1 className="text-2xl font-bold">{getHeaderTitle()}</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-            <SheetTrigger asChild>
-              <Button>
-                <Plus className="-ml-1 h-5 w-5" />
-                New Link
-              </Button>
-            </SheetTrigger>
-            <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-              <SheetHeader>
-                <SheetTitle className="font-headline text-2xl">Add a new link</SheetTitle>
-              </SheetHeader>
-              <AddLinkForm onSave={handleSaveLink} />
-            </SheetContent>
-          </Sheet>
-          <Button variant="outline" className="hidden md:inline-flex">Give Feedback</Button>
-          <Button variant="ghost" size="icon">
-            <Settings className="h-5 w-5" />
-          </Button>
+    <div className="flex flex-col min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-14 items-center">
+          <Link href="/" className="flex items-center gap-2 mr-6">
+            <LinkIcon className="h-6 w-6 text-primary" />
+            <span className="font-bold text-lg">Linkflow</span>
+          </Link>
+          <nav className="flex items-center gap-4 text-sm ml-auto">
+            <Link href="/login" className="transition-colors hover:text-primary">
+              Log In
+            </Link>
+            <Button asChild>
+              <Link href="/signup">
+                Sign Up <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </nav>
         </div>
       </header>
-
-      <main className="flex-1 p-4 md:p-8">
-        {activeFilter.type === 'graph' ? (
-          <GraphView />
-        ) : (
-          <>
-            {groupedAndFilteredLinks.length > 0 && groupedAndFilteredLinks[0].links.length > 0 ? (
-              <div className="space-y-8">
-                {groupedAndFilteredLinks.map(({ groupTitle, links: groupLinks }) => (
-                  <section key={groupTitle || 'all-links'}>
-                    {groupTitle && (
-                      <h2 className="text-xl font-bold mb-4 px-1">{groupTitle}</h2>
-                    )}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                      {groupLinks.map((link) => (
-                        <LinkCard key={link.id} link={link} onEdit={setLinkToEdit} />
-                      ))}
+      <main className="flex-1">
+        <section className="container grid lg:grid-cols-2 gap-10 items-center py-20 md:py-32">
+          <div className="space-y-6">
+            <h1
+              className="text-4xl md:text-6xl font-bold tracking-tighter animate-fade-in"
+              style={{ animationDelay: '0.2s' }}
+            >
+              Your personal link <br />
+              <span className="text-primary">command center.</span>
+            </h1>
+            <p
+              className="max-w-lg text-lg text-muted-foreground animate-fade-in"
+              style={{ animationDelay: '0.4s' }}
+            >
+              Stop losing track of valuable links. Linkflow helps you save, organize, and rediscover your digital world with smart tagging and beautiful organization.
+            </p>
+            <div
+              className="flex flex-col sm:flex-row gap-4 animate-fade-in"
+              style={{ animationDelay: '0.6s' }}
+            >
+              <Button size="lg" asChild>
+                <Link href="/signup">Get Started for Free</Link>
+              </Button>
+              <Button size="lg" variant="outline" asChild>
+                <Link href="/login">I have an account</Link>
+              </Button>
+            </div>
+          </div>
+          <div className="relative animate-fade-in" style={{ animationDelay: '0.5s' }}>
+             <Card className="p-6 bg-card/80 backdrop-blur-sm transform transition-transform duration-500 hover:scale-105 hover:-rotate-1">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <LinkIcon className="w-6 h-6 text-primary" />
                     </div>
-                  </section>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center text-center py-20">
-                <div className="p-4 bg-primary/10 rounded-full mb-4">
-                   {searchTerm ? <SearchIcon className="w-12 h-12 text-primary" /> : 
-                    activeFilter.type === 'favorites' ? <Star className="w-12 h-12 text-primary" /> :
-                    activeFilter.type === 'notes' ? <MessageSquare className="w-12 h-12 text-primary" /> :
-                    <WifiOff className="w-12 h-12 text-primary" />}
+                    <div>
+                        <h3 className="font-bold">AI-Powered Tagging</h3>
+                        <p className="text-sm text-muted-foreground">Automatically get title, description, and tags.</p>
+                    </div>
                 </div>
-                <h2 className="text-2xl font-bold font-headline mb-2">
-                  {searchTerm ? 'No links found' : 
-                   activeFilter.type === 'favorites' ? 'No favorites yet' :
-                   activeFilter.type === 'notes' ? 'No notes yet' :
-                   activeFilter.type !== 'all' ? 'No links found' :
-                   "It's quiet in here..."}
-                </h2>
-                <p className="text-muted-foreground max-w-sm">
-                  {searchTerm 
-                    ? `Your search for "${searchTerm}" did not match any links.` 
-                    : activeFilter.type === 'favorites'
-                    ? 'Click the star on a link to add it to your favorites.'
-                    : activeFilter.type === 'notes'
-                    ? 'Links with notes will appear here. Add a description to a link to create a note.'
-                    : activeFilter.type !== 'all' 
-                    ? 'There are no links in this view.'
-                    : 'Your saved links will appear here. Get started by adding your first link.'
-                  }
-                </p>
-              </div>
-            )}
-          </>
-        )}
+            </Card>
+            <Card className="p-6 bg-card/80 backdrop-blur-sm mt-4 ml-8 transform transition-transform duration-500 hover:scale-105 hover:rotate-1">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center">
+                        <Folder className="w-6 h-6 text-accent" />
+                    </div>
+                    <div>
+                        <h3 className="font-bold">Organize with Folders</h3>
+                        <p className="text-sm text-muted-foreground">Group your links into custom categories.</p>
+                    </div>
+                </div>
+            </Card>
+             <Card className="p-6 bg-card/80 backdrop-blur-sm mt-4 -ml-4 transform transition-transform duration-500 hover:scale-105 hover:rotate-2">
+                <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-lg bg-yellow-400/10 flex items-center justify-center">
+                        <Star className="w-6 h-6 text-yellow-500" />
+                    </div>
+                    <div>
+                        <h3 className="font-bold">Never Lose a Gem</h3>
+                        <p className="text-sm text-muted-foreground">Favorite your most important links.</p>
+                    </div>
+                </div>
+            </Card>
+          </div>
+        </section>
       </main>
-      
-      <Dialog open={!!linkToEdit} onOpenChange={(open) => !open && setLinkToEdit(null)}>
-        <DialogContent className="sm:max-w-lg overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Link</DialogTitle>
-          </DialogHeader>
-          <AddLinkForm link={linkToEdit} onSave={handleSaveLink} />
-        </DialogContent>
-      </Dialog>
-    </AppLayout>
-  );
-}
-
-export default function Home() {
-  return (
-    <AppProvider>
-      <HomePage />
-    </AppProvider>
+      <footer className="border-t py-6">
+        <div className="container text-center text-sm text-muted-foreground">
+          © {new Date().getFullYear()} Linkflow. All rights reserved.
+        </div>
+      </footer>
+    </div>
   );
 }

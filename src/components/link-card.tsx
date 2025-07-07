@@ -1,4 +1,3 @@
-
 import { MoreHorizontal, Trash2, Folder, Star, Pencil } from "lucide-react";
 
 import { Card, CardContent, CardFooter, CardTitle } from "@/components/ui/card";
