@@ -19,6 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useRouter } from 'next/navigation';
 import { ProfileSettingsForm } from './profile-settings-form';
 import { useToast } from '@/hooks/use-toast';
+import { SourceIcon } from './source-icon';
 
 const paletteColors = [
   '#fca5a5', '#fdba74', '#fde047', '#bef264', '#86efac', '#67e8f9', 
@@ -451,7 +452,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                         onClick={() => setActiveFilter({ type: 'source', value: source })}
                         tooltip={getBrandName(source)}
                       >
-                         <Globe /><span>{getBrandName(source)}</span>
+                         <SourceIcon hostname={source} />
+                         <span>{getBrandName(source)}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
