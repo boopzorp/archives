@@ -70,36 +70,75 @@ export async function getBehanceMetadata(url: string): Promise<SuggestTagsAndTit
 
 export async function getWsjMetadata(url: string): Promise<SuggestTagsAndTitleOutput | { error: string }> {
   const op = 'actions.getWsjMetadata';
+
+  const getTitleFromUrl = (urlString: string): string => {
+    try {
+      const urlObj = new URL(urlString);
+      const pathParts = urlObj.pathname.split('/');
+      const slug = pathParts.filter(part => part).pop();
+      if (slug) {
+        const cleanedSlug = slug.replace(/-\d{2}-\d{2}-\d{4}$/, '');
+        return cleanedSlug
+          .split('-')
+          .map(word => /^[a-zA-Z]+$/.test(word) ? word.charAt(0).toUpperCase() + word.slice(1) : word.toUpperCase())
+          .join(' ');
+      }
+    } catch (e) {
+      // Ignore URL parsing errors
+    }
+    return '';
+  };
+
   try {
-    const urlObj = new URL(url);
-    const pathParts = urlObj.pathname.split('/');
-    // Get the last part of the path, which is usually the slug
-    const slug = pathParts.filter(part => part).pop();
+    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36' } });
     
-    let title = '';
-    if (slug) {
-      // Exclude common live-coverage date patterns if they exist
-      const cleanedSlug = slug.replace(/-\d{2}-\d{2}-\d{4}$/, '');
-      title = cleanedSlug
-        .split('-')
-        .map(word => /^[a-zA-Z]+$/.test(word) ? word.charAt(0).toUpperCase() + word.slice(1) : word.toUpperCase())
-        .join(' ');
+    if (!res.ok) {
+      const title = getTitleFromUrl(url);
+      if (title) {
+        return {
+          title,
+          description: 'From The Wall Street Journal',
+          tags: ['wsj', 'news', 'finance'],
+        };
+      }
+      return { error: 'Failed to fetch WSJ link data.' };
+    }
+
+    const html = await res.text();
+    const $ = cheerio.load(html);
+
+    const title = $('meta[property="og:title"]').attr('content') || $('h1').first().text() || getTitleFromUrl(url);
+    const description = $('meta[property="og:description"]').attr('content') || $('meta[name="description"]').attr('content') || '';
+    let imageUrl = $('article picture img').attr('src') || $('meta[property="og:image"]').attr('content') || '';
+    
+    if (imageUrl && !imageUrl.startsWith('http')) {
+      const urlObj = new URL(url);
+      imageUrl = new URL(imageUrl, urlObj.origin).href;
     }
 
     if (!title) {
         return { error: "Could not determine title from WSJ URL." };
     }
-
+    
     const output: SuggestTagsAndTitleOutput = {
       title,
-      description: 'From The Wall Street Journal',
-      imageUrl: undefined,
+      description: description || 'From The Wall Street Journal',
+      imageUrl: imageUrl || undefined,
       tags: ['wsj', 'news', 'finance'],
     };
     
     return output;
+
   } catch (error) {
     console.error(`${op}:`, error);
+    const title = getTitleFromUrl(url);
+    if (title) {
+        return {
+          title,
+          description: 'From The Wall Street Journal',
+          tags: ['wsj', 'news', 'finance'],
+        };
+    }
     return { error: 'An unexpected error occurred while processing WSJ link.' };
   }
 }
