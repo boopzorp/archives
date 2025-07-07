@@ -32,7 +32,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Set user immediately to reduce perceived loading time
         setUser(user);
         setUsername(user.displayName);
         
@@ -41,10 +40,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const userDoc = await getDoc(userDocRef);
           if (userDoc.exists()) {
             const data = userDoc.data();
-            // Use username from DB if it exists, otherwise fallback to auth display name
             setUsername(data.username || user.displayName);
           } else {
-             // This case might happen on first signup if DB write is slow
              console.log("User document doesn't exist yet, using displayName from auth.");
           }
         } catch (error) {
@@ -63,20 +60,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateUserProfile = async (updates: { displayName?: string; photoFile?: File; photoURL?: string | null }) => {
     if (!auth?.currentUser || !db) return;
-    
+
     const { currentUser } = auth;
     const { displayName, photoFile, photoURL } = updates;
-    
+
     const profileAuthUpdates: { displayName?: string; photoURL?: string | null } = {};
     const profileDbUpdates: { username?: string; photoURL?: string | null } = {};
-    
-    if (displayName && displayName !== username) {
+
+    if (displayName && displayName !== currentUser.displayName) {
       profileAuthUpdates.displayName = displayName;
       profileDbUpdates.username = displayName;
     }
-    
+
     let finalPhotoURL: string | null = currentUser.photoURL;
-    
+
     if (photoFile) {
       if (!storage) {
         throw new Error("Firebase Storage is not configured. Please enable it in your Firebase project console.");
@@ -87,36 +84,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else if (photoURL !== undefined) {
       finalPhotoURL = photoURL;
       
-      // If we are removing the photo (setting URL to null) and there was a storage-backed picture before, delete it.
       if (finalPhotoURL === null && currentUser.photoURL?.includes('firebasestorage')) {
-         if (!storage) {
+        if (!storage) {
           throw new Error("Firebase Storage is not configured.");
         }
         const storageRef = ref(storage, `profile-pictures/${currentUser.uid}`);
         try {
-            await deleteObject(storageRef);
-        } catch(error: any) {
-            // It's okay if the object doesn't exist, we can ignore that error.
-            if (error.code !== 'storage/object-not-found') {
-                console.error("Failed to delete profile picture from storage", error);
-                // We don't re-throw here, as we can still update the profile URL in Auth/DB.
-            }
+          await deleteObject(storageRef);
+        } catch (error: any) {
+          if (error.code !== 'storage/object-not-found') {
+            console.error("Failed to delete profile picture from storage", error);
+            // Don't re-throw, allow profile URL update to continue
+          }
         }
       }
     }
-    
+
     if (finalPhotoURL !== currentUser.photoURL) {
       profileAuthUpdates.photoURL = finalPhotoURL;
       profileDbUpdates.photoURL = finalPhotoURL;
     }
-    
+
+    const updatePromises: Promise<any>[] = [];
     if (Object.keys(profileAuthUpdates).length > 0) {
-      await updateProfile(currentUser, profileAuthUpdates);
+      updatePromises.push(updateProfile(currentUser, profileAuthUpdates));
     }
-    
     if (Object.keys(profileDbUpdates).length > 0) {
       const userDocRef = doc(db, 'users', currentUser.uid);
-      await updateDoc(userDocRef, profileDbUpdates);
+      updatePromises.push(updateDoc(userDocRef, profileDbUpdates));
+    }
+
+    if (updatePromises.length > 0) {
+      await Promise.all(updatePromises);
     }
   };
 
