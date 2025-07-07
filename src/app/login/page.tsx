@@ -6,10 +6,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,7 +21,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/context/auth-context';
 
 const loginSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address." }),
+  username: z.string().min(1, { message: "Username is required." }),
   password: z.string().min(1, { message: "Password is required." }),
 });
 
@@ -30,7 +31,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const isFirebaseReady = !!auth;
+  const isFirebaseReady = !!auth && !!db;
   const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
@@ -42,7 +43,7 @@ export default function LoginPage() {
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "",
+      username: "",
       password: "",
     },
   });
@@ -51,12 +52,45 @@ export default function LoginPage() {
     if (!isFirebaseReady) return;
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("username", "==", data.username));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        toast({
+          variant: "destructive",
+          title: "Login Failed",
+          description: "Invalid username or password.",
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      const userDoc = querySnapshot.docs[0];
+      const userEmail = userDoc.data().email;
+
+      if (!userEmail) {
+        toast({
+          variant: "destructive",
+          title: "Login Failed",
+          description: "Could not find an email for this user.",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      await signInWithEmailAndPassword(auth, userEmail, data.password);
     } catch (error: any) {
+      let description = "An unexpected error occurred. Please try again.";
+      if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+          description = "Invalid username or password.";
+      } else {
+          description = error.message;
+      }
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: error.message || "An unexpected error occurred. Please try again.",
+        description: description,
       });
     } finally {
       setIsLoading(false);
@@ -98,12 +132,12 @@ export default function LoginPage() {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <FormField
                   control={form.control}
-                  name="email"
+                  name="username"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>Username</FormLabel>
                       <FormControl>
-                        <Input placeholder="you@example.com" {...field} disabled={!isFirebaseReady || isLoading} />
+                        <Input placeholder="yourusername" {...field} disabled={!isFirebaseReady || isLoading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
