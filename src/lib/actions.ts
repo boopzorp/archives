@@ -68,6 +68,43 @@ export async function getBehanceMetadata(url: string): Promise<SuggestTagsAndTit
   }
 }
 
+export async function getWsjMetadata(url: string): Promise<SuggestTagsAndTitleOutput | { error: string }> {
+  const op = 'actions.getWsjMetadata';
+  try {
+    const urlObj = new URL(url);
+    const pathParts = urlObj.pathname.split('/');
+    // Get the last part of the path, which is usually the slug
+    const slug = pathParts.filter(part => part).pop();
+    
+    let title = '';
+    if (slug) {
+      // Exclude common live-coverage date patterns if they exist
+      const cleanedSlug = slug.replace(/-\d{2}-\d{2}-\d{4}$/, '');
+      title = cleanedSlug
+        .split('-')
+        .map(word => /^[a-zA-Z]+$/.test(word) ? word.charAt(0).toUpperCase() + word.slice(1) : word.toUpperCase())
+        .join(' ');
+    }
+
+    if (!title) {
+        return { error: "Could not determine title from WSJ URL." };
+    }
+
+    const output: SuggestTagsAndTitleOutput = {
+      title,
+      description: 'From The Wall Street Journal',
+      imageUrl: undefined,
+      tags: ['wsj', 'news', 'finance'],
+    };
+    
+    return output;
+  } catch (error) {
+    console.error(`${op}:`, error);
+    return { error: 'An unexpected error occurred while processing WSJ link.' };
+  }
+}
+
+
 export async function getGenericMetadata(url: string): Promise<SuggestTagsAndTitleOutput | { error: string }> {
   const op = 'actions.getGenericMetadata';
   try {

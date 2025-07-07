@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import type { Link, SuggestTagsAndTitleOutput } from '@/lib/types';
-import { getTweetMetadata, getBehanceMetadata, getGenericMetadata } from '@/lib/actions';
+import { getTweetMetadata, getBehanceMetadata, getWsjMetadata, getGenericMetadata } from '@/lib/actions';
 
 const addLinkFormSchema = z.object({
   url: z.string().url({ message: "Please enter a valid URL." }),
@@ -86,6 +86,7 @@ export function AddLinkForm({ onSave, link }: LinkFormProps) {
     try {
       const isTweet = /https?:\/\/(www\.)?(twitter|x)\.com/.test(url);
       const isBehance = /https?:\/\/(www\.)?behance\.net/.test(url);
+      const isWsj = /https?:\/\/(www\.)?wsj\.com/.test(url);
 
       let result: SuggestTagsAndTitleOutput | { error: string };
 
@@ -93,6 +94,8 @@ export function AddLinkForm({ onSave, link }: LinkFormProps) {
         result = await getTweetMetadata(url);
       } else if (isBehance) {
         result = await getBehanceMetadata(url);
+      } else if (isWsj) {
+        result = await getWsjMetadata(url);
       } else {
         result = await getGenericMetadata(url);
       }
