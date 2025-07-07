@@ -32,20 +32,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        // The user object from onAuthStateChanged is the most up-to-date
         setUser(user);
-        setUsername(user.displayName);
         
+        // Fetch the username from Firestore as it's the source of truth for that
         try {
           const userDocRef = doc(db, 'users', user.uid);
           const userDoc = await getDoc(userDocRef);
           if (userDoc.exists()) {
-            const data = userDoc.data();
-            setUsername(data.username || user.displayName);
+            setUsername(userDoc.data().username || user.displayName);
           } else {
-             console.log("User document doesn't exist yet, using displayName from auth.");
+             setUsername(user.displayName);
           }
         } catch (error) {
           console.error("Error fetching user profile from Firestore:", error);
+          setUsername(user.displayName); // Fallback to auth display name on error
         }
         
       } else {
@@ -59,65 +60,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateUserProfile = async (updates: { displayName?: string; photoFile?: File; photoURL?: string | null }) => {
-    if (!auth?.currentUser || !db) return;
-
-    const { currentUser } = auth;
-    const { displayName, photoFile, photoURL } = updates;
-
-    const profileAuthUpdates: { displayName?: string; photoURL?: string | null } = {};
-    const profileDbUpdates: { username?: string; photoURL?: string | null } = {};
-
-    if (displayName && displayName !== currentUser.displayName) {
-      profileAuthUpdates.displayName = displayName;
-      profileDbUpdates.username = displayName;
+    if (!auth?.currentUser || !db) {
+      throw new Error("Authentication service is not properly configured.");
     }
 
-    let finalPhotoURL: string | null = currentUser.photoURL;
+    const { currentUser } = auth;
+    const { displayName, photoFile, photoURL: newPhotoUrlInput } = updates;
 
+    const authUpdates: { displayName?: string | null; photoURL?: string | null } = {};
+    const dbUpdates: { username?: string; photoURL?: string | null } = {};
+
+    // 1. Handle Display Name Update
+    if (displayName && displayName !== username) {
+      authUpdates.displayName = displayName;
+      dbUpdates.username = displayName;
+    }
+
+    // 2. Handle Photo Update
+    let newPhotoURL: string | null | undefined = newPhotoUrlInput;
+
+    // A new file takes precedence.
     if (photoFile) {
-      if (!storage) {
-        throw new Error("Firebase Storage is not configured. Please enable it in your Firebase project console.");
-      }
+      if (!storage) throw new Error("Firebase Storage is not configured.");
       const storageRef = ref(storage, `profile-pictures/${currentUser.uid}`);
       await uploadBytes(storageRef, photoFile);
-      finalPhotoURL = await getDownloadURL(storageRef);
-    } else if (photoURL !== undefined) {
-      finalPhotoURL = photoURL;
-      
-      if (finalPhotoURL === null && currentUser.photoURL?.includes('firebasestorage')) {
-        if (!storage) {
-          throw new Error("Firebase Storage is not configured.");
-        }
-        const storageRef = ref(storage, `profile-pictures/${currentUser.uid}`);
+      newPhotoURL = await getDownloadURL(storageRef);
+    }
+    
+    // Check if the final URL (from upload or selection) is different
+    if (newPhotoURL !== undefined && newPhotoURL !== currentUser.photoURL) {
+      authUpdates.photoURL = newPhotoURL;
+      dbUpdates.photoURL = newPhotoURL;
+
+      // If we are removing a picture that was stored, delete the old file.
+      if (newPhotoURL === null && currentUser.photoURL?.includes('firebasestorage')) {
+        if (!storage) throw new Error("Firebase Storage is not configured.");
+        const oldStorageRef = ref(storage, `profile-pictures/${currentUser.uid}`);
         try {
-          await deleteObject(storageRef);
+          await deleteObject(oldStorageRef);
         } catch (error: any) {
           if (error.code !== 'storage/object-not-found') {
-            console.error("Failed to delete profile picture from storage", error);
-            // Don't re-throw, allow profile URL update to continue
+            console.error("Failed to delete old profile picture:", error);
+            // Non-fatal, so we don't re-throw. The profile URL will still be updated.
           }
         }
       }
     }
 
-    if (finalPhotoURL !== currentUser.photoURL) {
-      profileAuthUpdates.photoURL = finalPhotoURL;
-      profileDbUpdates.photoURL = finalPhotoURL;
+    // 3. Apply updates sequentially if there are any changes
+    if (Object.keys(authUpdates).length > 0) {
+        await updateProfile(currentUser, authUpdates);
     }
 
-    const updatePromises: Promise<any>[] = [];
-    if (Object.keys(profileAuthUpdates).length > 0) {
-      updatePromises.push(updateProfile(currentUser, profileAuthUpdates));
-    }
-    if (Object.keys(profileDbUpdates).length > 0) {
-      const userDocRef = doc(db, 'users', currentUser.uid);
-      updatePromises.push(updateDoc(userDocRef, profileDbUpdates));
-    }
-
-    if (updatePromises.length > 0) {
-      await Promise.all(updatePromises);
+    if (Object.keys(dbUpdates).length > 0) {
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        await updateDoc(userDocRef, dbUpdates);
     }
   };
+
 
   const signOut = async () => {
     if (!auth) {
