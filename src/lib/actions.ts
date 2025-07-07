@@ -62,38 +62,32 @@ export async function getBehanceMetadata(url: string): Promise<SuggestTagsAndTit
         title = $('meta[property="og:title"]').attr('content') || $('title').text() || '';
     }
 
-    // Scrape all images from the page as requested
-    const imageCandidates = new Set<string>();
-    $('img').each((_, element) => {
-        const src = $(element).attr('src');
-        if (src) imageCandidates.add(src);
-
-        const srcset = $(element).attr('srcset');
-        if (srcset) {
-            srcset.split(',').forEach(part => {
-                const urlPart = part.trim().split(/\s+/)[0];
-                if (urlPart) imageCandidates.add(urlPart);
-            });
-        }
-    });
-
-    const urlObj = new URL(url);
     let imageUrl = '';
-
-    // Find the first suitable image
-    for (const imgUrl of imageCandidates) {
-        try {
-            const absoluteUrl = new URL(imgUrl, urlObj.origin).href;
-            // Use the first valid image URL that matches the requested extensions (excluding .ico)
-            if (/\.(webp|png|jpe?g|svg)$/i.test(absoluteUrl)) {
-                 imageUrl = absoluteUrl;
-                 break;
-            }
-        } catch (e) {
-            // Ignore invalid or malformed URLs
+    const scriptData = $('#beconfig-store-state').html();
+    if (scriptData) {
+      try {
+        const pageData = JSON.parse(scriptData);
+        // The cover images are located at preloaded.project.data.project.covers
+        const projectData = pageData?.preloaded?.project?.data?.project;
+        if (projectData && projectData.covers) {
+            const covers = projectData.covers;
+            imageUrl = covers['808'] || covers.original || covers['404'] || covers['202'] || Object.values(covers)[0] as string || '';
         }
+      } catch (e) {
+        console.error(`${op}: Failed to parse Behance JSON data`, e);
+      }
     }
     
+    // Fallback if the script parsing fails
+    if (!imageUrl) {
+        imageUrl = $('meta[property="og:image"]').attr('content') ||
+                   $('meta[property="og:image:url"]').attr('content') || '';
+    }
+    
+    if (imageUrl && !imageUrl.startsWith('http')) {
+      imageUrl = new URL(imageUrl, url).href;
+    }
+
     const output: SuggestTagsAndTitleOutput = {
       title,
       description: '', // As requested, no description.
