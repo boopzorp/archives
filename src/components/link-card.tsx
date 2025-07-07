@@ -18,6 +18,7 @@ import type { Link } from "@/lib/types";
 import { cn } from '@/lib/utils';
 import { useAppContext } from '@/context/app-context';
 import { useMemo } from 'react';
+import { useToast } from "@/hooks/use-toast";
 
 interface LinkCardProps {
   link: Link;
@@ -62,17 +63,49 @@ function getBrandName(url: string): string {
 
 export default function LinkCard({ link, onEdit }: LinkCardProps) {
   const { folders, tags: managedTags, updateLink, deleteLink } = useAppContext();
+  const { toast } = useToast();
 
   const openLink = () => {
     window.open(link.url, '_blank', 'noopener,noreferrer');
   };
   
-  const onDelete = () => deleteLink(link.id);
+  const onDelete = async () => {
+    try {
+      await deleteLink(link.id);
+    } catch (error) {
+      console.error("Failed to delete link:", error);
+      toast({
+        variant: "destructive",
+        title: "Failed to delete link",
+        description: "Could not connect to the database. Please ensure Firestore is enabled.",
+      });
+    }
+  };
   
-  const onToggleFavorite = () => updateLink(link.id, { isFavorite: !link.isFavorite });
+  const onToggleFavorite = async () => {
+    try {
+      await updateLink(link.id, { isFavorite: !link.isFavorite });
+    } catch (error) {
+      console.error("Failed to update favorite status:", error);
+      toast({
+        variant: "destructive",
+        title: "Failed to update link",
+        description: "Could not connect to the database. Please ensure Firestore is enabled.",
+      });
+    }
+  };
 
-  const onAssignFolder = (folderId: string | null) => {
-    updateLink(link.id, { folderId });
+  const onAssignFolder = async (folderId: string | null) => {
+    try {
+      await updateLink(link.id, { folderId });
+    } catch (error) {
+      console.error("Failed to assign folder:", error);
+      toast({
+        variant: "destructive",
+        title: "Failed to move link",
+        description: "Could not connect to the database. Please ensure Firestore is enabled.",
+      });
+    }
   };
   
   const onEditClick = () => onEdit(link);

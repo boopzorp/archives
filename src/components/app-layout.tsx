@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useRouter } from 'next/navigation';
 import { ProfileSettingsForm } from './profile-settings-form';
+import { useToast } from '@/hooks/use-toast';
 
 const paletteColors = [
   '#fca5a5', '#fdba74', '#fde047', '#bef264', '#86efac', '#67e8f9', 
@@ -29,6 +30,7 @@ const paletteColors = [
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, username, signOut } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
 
   const { 
     searchTerm, setSearchTerm, 
@@ -62,9 +64,18 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const handleAddFolder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newFolderName.trim()) {
-      await addFolder(newFolderName.trim());
-      setNewFolderName('');
-      setIsFolderDialogOpen(false);
+      try {
+        await addFolder(newFolderName.trim());
+        setNewFolderName('');
+        setIsFolderDialogOpen(false);
+      } catch (error) {
+        console.error("Failed to add folder:", error);
+        toast({
+          variant: "destructive",
+          title: "Failed to add folder",
+          description: "Could not connect to the database. Please ensure Firestore is enabled.",
+        });
+      }
     }
   };
   
@@ -80,14 +91,23 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const handleRenameItem = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (folderToRename && renamedFolderName.trim()) {
-      await updateFolder(folderToRename.id, { name: renamedFolderName.trim() });
-      setFolderToRename(null);
-      setRenamedFolderName('');
-    } else if (tagToRename && renamedTagName.trim()) {
-      await renameTag(tagToRename.name, renamedTagName.trim());
-      setTagToRename(null);
-      setRenamedTagName('');
+    try {
+      if (folderToRename && renamedFolderName.trim()) {
+        await updateFolder(folderToRename.id, { name: renamedFolderName.trim() });
+        setFolderToRename(null);
+        setRenamedFolderName('');
+      } else if (tagToRename && renamedTagName.trim()) {
+        await renameTag(tagToRename.name, renamedTagName.trim());
+        setTagToRename(null);
+        setRenamedTagName('');
+      }
+    } catch (error) {
+       console.error("Failed to rename item:", error);
+        toast({
+          variant: "destructive",
+          title: "Failed to rename",
+          description: "Could not connect to the database. Please ensure Firestore is enabled.",
+        });
     }
   };
 
@@ -100,20 +120,38 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   const handleDeleteItem = async () => {
-    if (folderToDelete) {
-      await deleteFolder(folderToDelete.id);
-      setFolderToDelete(null);
-    } else if (tagToDelete) {
-      await deleteTag(tagToDelete.name);
-      setTagToDelete(null);
+    try {
+      if (folderToDelete) {
+        await deleteFolder(folderToDelete.id);
+        setFolderToDelete(null);
+      } else if (tagToDelete) {
+        await deleteTag(tagToDelete.name);
+        setTagToDelete(null);
+      }
+    } catch (error) {
+      console.error("Failed to delete item:", error);
+      toast({
+        variant: "destructive",
+        title: "Failed to delete",
+        description: "Could not connect to the database. Please ensure Firestore is enabled.",
+      });
     }
   };
 
   const handleSetItemColor = async (id: string, color: string, type: 'folder' | 'tag') => {
-    if (type === 'folder') {
-      await updateFolder(id, { color });
-    } else {
-      await updateTag(id, { color });
+    try {
+      if (type === 'folder') {
+        await updateFolder(id, { color });
+      } else {
+        await updateTag(id, { color });
+      }
+    } catch (error) {
+       console.error("Failed to set color:", error);
+       toast({
+          variant: "destructive",
+          title: "Failed to set color",
+          description: "Could not connect to the database. Please ensure Firestore is enabled.",
+        });
     }
   };
   

@@ -17,10 +17,12 @@ import { useRouter } from 'next/navigation';
 import { format, isToday, isYesterday, parseISO } from 'date-fns';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { useToast } from '@/hooks/use-toast';
 
 function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
 
   const { searchTerm, links, addLink, updateLink, activeFilter, folders, groupBy, sortBy, loading: dataLoading } = useAppContext();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -34,17 +36,26 @@ function DashboardPage() {
 
 
   const handleSaveLink = async (formDataWithImage: AddLinkFormValues & { imageUrl?: string }, linkId?: string) => {
-    const { imageUrl, ...formData } = formDataWithImage;
-    const tagsArray = formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [];
-    
-    const linkData = { ...formData, tags: tagsArray, imageUrl };
-    
-    if (linkId) {
-      await updateLink(linkId, linkData);
-      setLinkToEdit(null);
-    } else {
-      await addLink(linkData);
-      setIsSheetOpen(false);
+    try {
+      const { imageUrl, ...formData } = formDataWithImage;
+      const tagsArray = formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [];
+      
+      const linkData = { ...formData, tags: tagsArray, imageUrl };
+      
+      if (linkId) {
+        await updateLink(linkId, linkData);
+        setLinkToEdit(null);
+      } else {
+        await addLink(linkData);
+        setIsSheetOpen(false);
+      }
+    } catch (error) {
+       console.error("Failed to save link:", error);
+       toast({
+        variant: "destructive",
+        title: "Oh no! Something went wrong.",
+        description: "Could not save the link. This can happen if your Firebase project is not fully configured. Please ensure you have enabled Firestore database in your project.",
+      });
     }
   };
 

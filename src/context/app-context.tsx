@@ -107,7 +107,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   
   const addLink = async (newLinkData: Omit<Link, 'id' | 'createdAt' | 'isFavorite' | 'folderId'>) => {
     const docRef = getDocRef();
-    if (!docRef) return;
+    if (!docRef) throw new Error("User not authenticated or database not configured.");
     const linkWithMeta: Link = {
       ...newLinkData,
       id: new Date().toISOString() + Math.random().toString(36).substr(2, 9),
@@ -120,7 +120,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const deleteLink = async (id: string) => {
     const docRef = getDocRef();
-    if (!docRef) return;
+    if (!docRef) throw new Error("User not authenticated or database not configured.");
     const docSnap = await getDoc(docRef);
     if(docSnap.exists()){
       const currentLinks = docSnap.data().links || [];
@@ -133,7 +133,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateLink = async (id: string, updates: Partial<Omit<Link, 'id'>>) => {
     const docRef = getDocRef();
-    if (!docRef) return;
+    if (!docRef) throw new Error("User not authenticated or database not configured.");
     const docSnap = await getDoc(docRef);
      if(docSnap.exists()){
       const currentLinks = docSnap.data().links || [];
@@ -146,7 +146,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   
   const addFolder = async (name: string) => {
     const docRef = getDocRef();
-    if (!docRef) return;
+    if (!docRef) throw new Error("User not authenticated or database not configured.");
     const newFolder: Folder = {
       id: new Date().toISOString() + Math.random().toString(36).substr(2, 9),
       name,
@@ -156,7 +156,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   
   const deleteFolder = async (id: string) => {
     const docRef = getDocRef();
-    if (!docRef) return;
+    if (!docRef) throw new Error("User not authenticated or database not configured.");
     const docSnap = await getDoc(docRef);
     if(docSnap.exists()){
       const currentFolders = docSnap.data().folders || [];
@@ -180,7 +180,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateFolder = async (id: string, updates: Partial<Omit<Folder, 'id'>>) => {
     const docRef = getDocRef();
-    if (!docRef) return;
+    if (!docRef) throw new Error("User not authenticated or database not configured.");
     const docSnap = await getDoc(docRef);
     if(docSnap.exists()){
       const currentFolders = docSnap.data().folders || [];
@@ -193,7 +193,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   
   const renameTag = async (oldName: string, newName: string) => {
     const docRef = getDocRef();
-    if (!docRef) return;
+    if (!docRef) throw new Error("User not authenticated or database not configured.");
     const docSnap = await getDoc(docRef);
     if(docSnap.exists()){
         const currentTags = docSnap.data().tags || [];
@@ -218,7 +218,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const deleteTag = async (name: string) => {
     const docRef = getDocRef();
-    if (!docRef) return;
+    if (!docRef) throw new Error("User not authenticated or database not configured.");
     const docSnap = await getDoc(docRef);
     if(docSnap.exists()){
         const currentTags = docSnap.data().tags || [];
@@ -242,7 +242,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   
   const updateTag = async (name: string, updates: Partial<Omit<Tag, 'name'>>) => {
      const docRef = getDocRef();
-     if (!docRef) return;
+     if (!docRef) throw new Error("User not authenticated or database not configured.");
      const docSnap = await getDoc(docRef);
      if(docSnap.exists()){
         const currentTags = docSnap.data().tags || [];
