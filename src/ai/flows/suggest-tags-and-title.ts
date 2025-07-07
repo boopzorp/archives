@@ -36,7 +36,7 @@ const prompt = ai.definePrompt({
 
 When analyzing the page, focus on the primary content. Ignore headers, footers, navigation bars, and comment sections if possible.
 
-Analyze the content of the following URL: {{media url=url}}
+Analyze the content of the following URL: {{{url}}}
 
 Based on your analysis, provide the following information if available:
 1.  **title**: The main title of the article or project. If no title can be found, this can be omitted.
