@@ -51,7 +51,7 @@ export async function getBehanceMetadata(url: string): Promise<SuggestTagsAndTit
         .join(' ');
     }
 
-    // 2. Fetch HTML and parse for the first image
+    // 2. Fetch HTML and parse for the image
     const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36' } });
     if (!res.ok) {
       console.error(`${op}: fetch failed with status ${res.status}`);
@@ -60,7 +60,23 @@ export async function getBehanceMetadata(url: string): Promise<SuggestTagsAndTit
     const html = await res.text();
     const $ = cheerio.load(html);
 
-    let imageUrl = $('img').first().attr('src') || '';
+    // Try to find the image inside the specific component Behance uses, based on the screenshot.
+    const imageElement = $('a[class*="ImageElement-root"] img').first();
+    let imageUrl = imageElement.attr('src') || '';
+    
+    // If src is not found, check srcset as a fallback.
+    if (!imageUrl) {
+      const srcset = imageElement.attr('srcset');
+      if (srcset) {
+        imageUrl = srcset.split(',')[0].trim().split(' ')[0];
+      }
+    }
+    
+    // If the specific selector fails, fall back to the very first image on the page.
+    if (!imageUrl) {
+        imageUrl = $('img').first().attr('src') || '';
+    }
+
 
     // If the found URL is relative, make it absolute.
     if (imageUrl && !imageUrl.startsWith('http')) {
