@@ -23,7 +23,7 @@ function ExtensionPopupContent() {
   const appOrigin = 'https://arch1ves.vercel.app';
 
   useEffect(() => {
-    // Signal to the parent window that the UI is ready to receive data
+    // 1. Signal to the parent window that the UI is ready to receive data
     window.parent.postMessage({ type: 'POPUP_UI_READY' }, appOrigin);
 
     const handleMessage = (event: MessageEvent) => {
@@ -34,13 +34,14 @@ function ExtensionPopupContent() {
 
       const { type, url } = event.data;
 
-      if (type === 'CURRENT_TAB_INFO' && url) {
+      if (type === 'CURRENT_TAB_INFO') {
         try {
-          // Quick validation
-          new URL(url);
+          // Quick validation for non-null URLs
+          if (url) new URL(url);
           setCurrentUrl(url);
         } catch (e) {
           console.error("Invalid URL passed to extension popup:", e);
+          setCurrentUrl(null);
         }
       }
     };
@@ -145,7 +146,7 @@ function ExtensionPopupContent() {
              </Button>
           </div>
           <Button onClick={() => setView('addForm')} className="w-full" disabled={!currentUrl}>
-            Save Current Page
+            { currentUrl ? 'Save Current Page' : 'Getting page URL...' }
           </Button>
            <Button variant="outline" onClick={handleOpenApp} className="w-full">
             Open archives <ExternalLink className="ml-2 h-4 w-4" />

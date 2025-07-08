@@ -38,6 +38,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     const currentTab = tabs[0];
                     if (currentTab && currentTab.url && currentTab.url.startsWith('http')) {
                         iframe.contentWindow.postMessage({ type: 'CURRENT_TAB_INFO', url: currentTab.url }, appOrigin);
+                    } else {
+                        // If there's no valid URL, still send something so the UI can react
+                        iframe.contentWindow.postMessage({ type: 'CURRENT_TAB_INFO', url: null }, appOrigin);
                     }
                 });
                 break;
@@ -45,12 +48,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.close();
                 break;
             case 'OPEN_APP':
-                chrome.tabs.create({ url: 'https://arch1ves.vercel.app/dashboard' });
+                chrome.runtime.sendMessage({ type: 'OPEN_APP' });
                 window.close();
                 break;
             case 'AUTH_ACTION':
-                // Add from=extension to tell the auth pages not to redirect to the dashboard
-                const authUrl = `https://arch1ves.vercel.app${path}?from=extension`;
+                // Open auth pages directly from the popup script.
+                // This is more reliable than messaging the background script.
+                const authUrl = `${appOrigin}${path}?from=extension`;
                 chrome.tabs.create({ url: authUrl });
                 window.close();
                 break;
