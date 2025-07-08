@@ -42,6 +42,10 @@ function ExtensionPopupContent() {
     return () => {
       window.removeEventListener('message', handleMessage);
     };
+
+    // Send a message to the parent window indicating the iframe is ready
+    window.parent.postMessage({ type: 'POPUP_READY' }, appOrigin);
+
   }, []); // Empty dependency array means this runs once on mount
 
 

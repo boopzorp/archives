@@ -29,6 +29,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 chrome.tabs.create({ url: authUrl });
                 window.close();
                 break;
+            case 'POPUP_READY':
+                // The iframe is ready to receive messages, send the current tab info
+                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                    const currentTab = tabs[0];
+                    if (currentTab && currentTab.url && currentTab.url.startsWith('http')) {
+                        iframe.contentWindow.postMessage({ type: 'CURRENT_TAB_INFO', url: currentTab.url }, appOrigin);
+                    } else {
+                        // If there's no valid URL, send null so the UI can disable the save button
+                        iframe.contentWindow.postMessage({ type: 'CURRENT_TAB_INFO', url: null }, appOrigin);
+                    }
+                });
+                break;
         }
     });
 
@@ -46,16 +58,5 @@ document.addEventListener('DOMContentLoaded', () => {
         clearTimeout(connectionTimeout);
         if (statusContainer) statusContainer.style.display = 'none';
         iframe.style.display = 'block';
-
-        // Now that the iframe is ready, get the tab info and send it
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            const currentTab = tabs[0];
-            if (currentTab && currentTab.url && currentTab.url.startsWith('http')) {
-                iframe.contentWindow.postMessage({ type: 'CURRENT_TAB_INFO', url: currentTab.url }, appOrigin);
-            } else {
-                // If there's no valid URL, send null so the UI can disable the save button
-                iframe.contentWindow.postMessage({ type: 'CURRENT_TAB_INFO', url: null }, appOrigin);
-            }
-        });
     };
 });
