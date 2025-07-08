@@ -49,7 +49,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.close();
                 break;
             case 'AUTH_ACTION':
-                chrome.runtime.sendMessage({ type: 'AUTH_ACTION', path: path });
+                // Add from=extension to tell the auth pages not to redirect to the dashboard
+                const authPath = `${path}${path.includes('?') ? '&' : '?'}from=extension`;
+                chrome.runtime.sendMessage({ type: 'AUTH_ACTION', path: authPath });
                 window.close();
                 break;
         }

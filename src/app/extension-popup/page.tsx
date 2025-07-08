@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useAppContext } from '@/context/app-context';
 import { Button } from '@/components/ui/button';
@@ -10,13 +10,11 @@ import { Loader2, LogOut, ExternalLink, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getTweetMetadata, getBehanceMetadata, getWsjMetadata, getGenericMetadata } from '@/lib/actions';
 import type { Link, SuggestTagsAndTitleOutput } from '@/lib/types';
-import { useSearchParams } from 'next/navigation';
 
 function ExtensionPopupContent() {
   const { user, username, loading: authLoading, signOut } = useAuth();
   const { addLink } = useAppContext();
   const { toast } = useToast();
-  const searchParams = useSearchParams();
 
   const [currentUrl, setCurrentUrl] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -25,12 +23,28 @@ function ExtensionPopupContent() {
   const appOrigin = 'https://arch1ves.vercel.app';
 
   useEffect(() => {
-    const urlFromQuery = searchParams.get('url');
-    if (urlFromQuery) {
-      setCurrentUrl(urlFromQuery);
-    }
-  }, [searchParams]);
+    // 1. Signal to the parent (extension popup script) that the UI is ready.
+    window.parent.postMessage({ type: 'POPUP_UI_READY' }, appOrigin);
 
+    // 2. Listen for messages from the parent
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== appOrigin) {
+        return;
+      }
+      
+      const { type, url } = event.data;
+      if (type === 'CURRENT_TAB_INFO' && url) {
+        setCurrentUrl(url);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+
+    // 3. Cleanup listener on unmount
+    return () => {
+      window.removeEventListener('message', handleMessage);
+    };
+  }, []); // Run only once on mount
 
   const handleSave = async () => {
     if (!currentUrl) {
@@ -168,13 +182,6 @@ function ExtensionPopupContent() {
 
 
 export default function ExtensionPopupPage() {
-  return (
-    <Suspense fallback={
-        <div className="flex items-center justify-center h-full w-full">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        </div>
-    }>
-      <ExtensionPopupContent />
-    </Suspense>
-  )
+  // No longer need Suspense as we are not using useSearchParams
+  return <ExtensionPopupContent />;
 }
