@@ -4,10 +4,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadingDiv = document.getElementById('loading');
     const errorDiv = document.getElementById('error');
     const statusContainer = document.getElementById('status-container');
-    const appUrl = 'https://arch1ves.vercel.app/extension-popup';
-    const appOrigin = new URL(appUrl).origin;
+    const baseUrl = 'https://arch1ves.vercel.app/extension-popup';
+    const appOrigin = new URL(baseUrl).origin;
 
-    // Set up message listener to catch all messages from the iframe
+    // First, query for the active tab to get its URL
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (chrome.runtime.lastError) {
+            console.error("Error querying tabs:", chrome.runtime.lastError.message);
+            // Handle error, maybe show an error message in the popup
+            return;
+        }
+        
+        const currentTab = tabs[0];
+        const currentUrl = (currentTab && currentTab.url && currentTab.url.startsWith('http')) 
+            ? currentTab.url 
+            : null;
+
+        // Construct the final URL with the current page's URL as a query parameter
+        const finalUrl = currentUrl 
+            ? `${baseUrl}?url=${encodeURIComponent(currentUrl)}`
+            : baseUrl;
+
+        iframe.src = finalUrl;
+    });
+    
+    // Set up a listener for simple commands from the iframe (e.g., to close popup or open a tab)
     window.addEventListener('message', (event) => {
         // IMPORTANT: Always verify the origin of the message
         if (event.origin !== appOrigin) {
@@ -29,30 +50,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 chrome.tabs.create({ url: authUrl });
                 window.close();
                 break;
-            case 'POPUP_READY':
-                // The iframe is ready to receive messages, now query for the tab info and send it
-                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                    if (chrome.runtime.lastError) {
-                        console.error("Error querying tabs:", chrome.runtime.lastError.message);
-                        iframe.contentWindow.postMessage({ type: 'CURRENT_TAB_INFO', url: null, error: chrome.runtime.lastError.message }, appOrigin);
-                        return;
-                    }
-                    
-                    const currentTab = tabs[0];
-                    const currentUrl = (currentTab && currentTab.url && currentTab.url.startsWith('http')) ? currentTab.url : null;
-                    
-                    // Send the current tab info to the iframe
-                    iframe.contentWindow.postMessage({ type: 'CURRENT_TAB_INFO', url: currentUrl }, appOrigin);
-                });
-                break;
-            case 'POPUP_SCRIPT_READY_ACK':
-                // This case is now handled by POPUP_READY from the iframe.
-                break; 
         }
     });
 
-    iframe.src = appUrl;
-
+    // Handle iframe loading and connection timeout
     const connectionTimeout = setTimeout(() => {
         if (iframe.style.display === 'none') {
             if (loadingDiv) loadingDiv.style.display = 'none';
@@ -60,7 +61,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 5000);
 
-    // This onload is for showing/hiding the loading/error states.
     iframe.onload = () => {
         clearTimeout(connectionTimeout);
         if (statusContainer) statusContainer.style.display = 'none';

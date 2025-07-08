@@ -1,7 +1,8 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
 import { useAppContext } from '@/context/app-context';
 import { Button } from '@/components/ui/button';
@@ -15,54 +16,29 @@ function ExtensionPopupContent() {
   const { user, username, loading: authLoading, signOut } = useAuth();
   const { addLink } = useAppContext();
   const { toast } = useToast();
+  const searchParams = useSearchParams();
 
   const [currentUrl, setCurrentUrl] = useState<string | null>(null);
   const [view, setView] = useState<'main' | 'addForm'>('main');
-  const [isSaving, setIsSaving] = useState(false);
   
   const appOrigin = 'https://arch1ves.vercel.app';
 
   useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      // IMPORTANT: Always verify the origin
-      if (event.origin !== appOrigin) {
-        return;
-      }
-
-      const { type, url } = event.data;
-
-      switch (type) {
-        case 'POPUP_SCRIPT_READY':
-          // Popup script is ready, send our readiness message
-          window.parent.postMessage({ type: 'POPUP_READY' }, appOrigin);
-          break;
-        case 'CURRENT_TAB_INFO':
-          if (url) {
-            setCurrentUrl(url);
-          }
-          break;
-      }
-    };
-    
-    window.addEventListener('message', handleMessage);
-
-    // Cleanup listener on component unmount
-    return () => {
-      window.removeEventListener('message', handleMessage);
-    };
-
-  }, []); // Empty dependency array means this runs once on mount
+    // The URL is now passed via query parameter, making this much more reliable.
+    const urlFromQuery = searchParams.get('url');
+    if (urlFromQuery) {
+      setCurrentUrl(urlFromQuery);
+    }
+  }, [searchParams]);
 
 
   const handleSaveLink = async (formDataWithImage: AddLinkFormValues & { imageUrl?: string }) => {
-    setIsSaving(true);
     try {
       const { imageUrl, ...formData } = formDataWithImage;
       const tagsArray = formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [];
       
       const linkData: Partial<Link> = { ...formData, tags: tagsArray, imageUrl };
       
-      // Firestore does not support `undefined`.
       Object.keys(linkData).forEach(key => {
         if ((linkData as any)[key] === undefined) {
           delete (linkData as any)[key];
@@ -76,6 +52,7 @@ function ExtensionPopupContent() {
         description: "Your link has been added to archives.",
       });
 
+      // After saving, send a message to the parent to close the popup.
       setTimeout(() => {
         window.parent.postMessage({ type: 'CLOSE_POPUP' }, appOrigin);
       }, 1000);
@@ -87,10 +64,10 @@ function ExtensionPopupContent() {
         title: "Oh no! Something went wrong.",
         description: "Could not save the link. Please try again.",
       });
-      setIsSaving(false);
     }
   };
   
+  // These functions send a simple, one-way command to the parent window (popup.js).
   const handleOpenApp = () => {
      window.parent.postMessage({ type: 'OPEN_APP' }, appOrigin);
   }
@@ -101,7 +78,7 @@ function ExtensionPopupContent() {
 
   const handleSignOut = async () => {
     await signOut();
-    setView('main');
+    setView('main'); // Go back to the main (login) view after signing out.
   };
 
   if (authLoading) {
@@ -123,6 +100,7 @@ function ExtensionPopupContent() {
             </Button>
             <h2 className="text-lg font-semibold">Save Link</h2>
           </div>
+          {/* The AddLinkForm will automatically use the initialUrl to fetch metadata */}
           <AddLinkForm onSave={handleSaveLink} initialUrl={currentUrl!} />
         </div>
       )
@@ -145,7 +123,7 @@ function ExtensionPopupContent() {
              </Button>
           </div>
           <Button onClick={() => setView('addForm')} className="w-full" disabled={!currentUrl}>
-            { currentUrl ? 'Save Current Page' : 'Getting page URL...' }
+            { currentUrl ? 'Save Current Page' : 'Not on a valid page' }
           </Button>
            <Button variant="outline" onClick={handleOpenApp} className="w-full">
             Open archives <ExternalLink className="ml-2 h-4 w-4" />
@@ -175,5 +153,14 @@ function ExtensionPopupContent() {
 }
 
 export default function ExtensionPopupPage() {
-    return <ExtensionPopupContent />;
+    // useSearchParams requires a Suspense boundary.
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center h-full w-full">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+        }>
+            <ExtensionPopupContent />
+        </Suspense>
+    );
 }
