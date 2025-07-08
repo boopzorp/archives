@@ -34,24 +34,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                     if (chrome.runtime.lastError) {
                         console.error("Error querying tabs:", chrome.runtime.lastError.message);
-                        if (currentUrl === null) {
-                            console.log("No active tab with a valid URL found.");
-                        }
-                        // Send the current tab info to the iframe
-                        iframe.contentWindow.postMessage({ type: 'CURRENT_TAB_INFO', url: currentUrl }, appOrigin);
-                    });
+                        iframe.contentWindow.postMessage({ type: 'CURRENT_TAB_INFO', url: null, error: chrome.runtime.lastError.message }, appOrigin);
+                        return;
+                    }
+                    
+                    const currentTab = tabs[0];
+                    const currentUrl = (currentTab && currentTab.url && currentTab.url.startsWith('http')) ? currentTab.url : null;
+                    
+                    // Send the current tab info to the iframe
+                    iframe.contentWindow.postMessage({ type: 'CURRENT_TAB_INFO', url: currentUrl }, appOrigin);
                 });
                 break;
             case 'POPUP_SCRIPT_READY_ACK':
-                // Iframe received the POPUP_SCRIPT_READY message, now send the tab info
-                break; // No action needed in popup script upon ACK
+                // This case is now handled by POPUP_READY from the iframe.
+                break; 
         }
     });
-
-    // Send a message to the iframe to indicate the popup script is ready
-    iframe.onload = () => {
-        iframe.contentWindow.postMessage({ type: 'POPUP_SCRIPT_READY' }, appOrigin);
-    };
 
     iframe.src = appUrl;
 
@@ -62,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 5000);
 
-    // When the iframe has finished loading, we initiate the data transfer
+    // This onload is for showing/hiding the loading/error states.
     iframe.onload = () => {
         clearTimeout(connectionTimeout);
         if (statusContainer) statusContainer.style.display = 'none';
