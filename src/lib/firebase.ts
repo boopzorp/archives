@@ -26,6 +26,9 @@ if (firebaseConfig.apiKey) {
     storage = getStorage(app);
     
     if (typeof window !== 'undefined') {
+      // Only enable persistence for the main app, not for the short-lived extension popup,
+      // to avoid multi-tab conflicts.
+      if (!window.location.pathname.startsWith('/extension-popup')) {
         enableIndexedDbPersistence(db, { synchronizeTabs: true })
           .catch((err) => {
               if (err.code == 'failed-precondition') {
@@ -36,6 +39,7 @@ if (firebaseConfig.apiKey) {
                   console.warn("Firebase persistence failed: Browser does not support this feature.");
               }
           });
+      }
     }
 
   } catch (e) {
