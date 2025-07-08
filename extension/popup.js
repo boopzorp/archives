@@ -31,14 +31,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case 'POPUP_READY':
                 // The iframe is ready to receive messages, send the current tab info
-                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                    const currentTab = tabs[0];
-                    if (currentTab && currentTab.url && currentTab.url.startsWith('http')) {
-                        iframe.contentWindow.postMessage({ type: 'CURRENT_TAB_INFO', url: currentTab.url }, appOrigin);
-                    } else {
-                        // If there's no valid URL, send null so the UI can disable the save button
-                        iframe.contentWindow.postMessage({ type: 'CURRENT_TAB_INFO', url: null }, appOrigin);
-                    }
+                // Add a small delay to ensure the tab is fully active
+                setTimeout(() => {
+                    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                        if (chrome.runtime.lastError) {
+                            console.error("Error querying tabs:", chrome.runtime.lastError.message);
+                            iframe.contentWindow.postMessage({ type: 'CURRENT_TAB_INFO', url: null }, appOrigin);
+                            return;
+                        }
+                        const currentTab = tabs[0];
+                        const currentUrl = (currentTab && currentTab.url && currentTab.url.startsWith('http')) ? currentTab.url : null;
+                        // Send the current tab info to the iframe
+                        iframe.contentWindow.postMessage({ type: 'CURRENT_TAB_INFO', url: currentUrl }, appOrigin);
+                    });
                 });
                 break;
         }

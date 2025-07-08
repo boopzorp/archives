@@ -26,7 +26,7 @@ if (firebaseConfig.apiKey) {
     storage = getStorage(app);
     
     if (typeof window !== 'undefined') {
-        enableIndexedDbPersistence(db)
+        enableIndexedDbPersistence(db, { synchronizeTabs: true })
           .catch((err) => {
               if (err.code == 'failed-precondition') {
                   // This can happen if you have multiple tabs open.
