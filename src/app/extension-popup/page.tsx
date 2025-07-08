@@ -24,7 +24,12 @@ export default function ExtensionPopupPage() {
   const appOrigin = 'https://arch1ves.vercel.app';
 
   useEffect(() => {
+    // 1. Tell the parent extension window that the UI is ready.
+    window.parent.postMessage({ type: 'POPUP_UI_READY' }, appOrigin);
+
+    // 2. Set up a listener to receive the tab info from the parent.
     const handleMessage = (event: MessageEvent) => {
+      // IMPORTANT: Always verify the origin for security
       if (event.origin !== appOrigin) return;
 
       if (event.data.type === 'CURRENT_TAB_INFO') {
@@ -34,7 +39,7 @@ export default function ExtensionPopupPage() {
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, []);
+  }, []); // Empty dependency array ensures this runs only once when the component mounts.
 
 
   const handleSave = async () => {
