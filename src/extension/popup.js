@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('message', (event) => {
         // IMPORTANT: Always verify the origin of the message
         if (event.origin !== appOrigin) {
+            console.warn('Message from unexpected origin ignored:', event.origin);
             return;
         }
 
