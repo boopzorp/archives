@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -27,9 +27,10 @@ export type AddLinkFormValues = z.infer<typeof addLinkFormSchema>;
 interface LinkFormProps {
   onSave: (data: AddLinkFormValues & { imageUrl?: string }, linkId?: string) => void;
   link?: Link | null;
+  initialUrl?: string;
 }
 
-export function AddLinkForm({ onSave, link }: LinkFormProps) {
+export function AddLinkForm({ onSave, link, initialUrl }: LinkFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | undefined>();
   const { toast } = useToast();
@@ -39,34 +40,14 @@ export function AddLinkForm({ onSave, link }: LinkFormProps) {
   const form = useForm<AddLinkFormValues>({
     resolver: zodResolver(addLinkFormSchema),
     defaultValues: {
-      url: "",
-      title: "",
-      description: "",
-      tags: "",
+      url: link?.url || initialUrl || "",
+      title: link?.title || "",
+      description: link?.description || "",
+      tags: link?.tags?.join(', ') || "",
     },
   });
-
-  useEffect(() => {
-    if (link) {
-      form.reset({
-        url: link.url,
-        title: link.title,
-        description: link.description || '',
-        tags: link.tags.join(', '),
-      });
-      setImageUrl(link.imageUrl);
-    } else {
-      form.reset({
-        url: "",
-        title: "",
-        description: "",
-        tags: "",
-      });
-      setImageUrl(undefined);
-    }
-  }, [link, form]);
-
-  const handleFetchMetadata = async () => {
+  
+  const handleFetchMetadata = useCallback(async () => {
     const url = form.getValues("url");
     if (!url) {
       form.setError("url", { type: "manual", message: "URL is required to fetch metadata." });
@@ -140,7 +121,35 @@ export function AddLinkForm({ onSave, link }: LinkFormProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [form, toast]);
+
+
+  useEffect(() => {
+    form.reset({
+      url: link?.url || initialUrl || "",
+      title: link?.title || "",
+      description: link?.description || "",
+      tags: link?.tags?.join(', ') || "",
+    });
+
+    if (link) {
+      setImageUrl(link.imageUrl);
+    } else {
+      // If there's an initial URL (from the extension), clear any previous image
+      if (initialUrl) {
+          setImageUrl(undefined);
+      }
+    }
+  }, [link, initialUrl, form]);
+
+  useEffect(() => {
+    // Automatically fetch metadata if the URL is from the extension
+    // and the form is not in edit mode.
+    if (initialUrl && !link) {
+      handleFetchMetadata();
+    }
+  }, [initialUrl, link, handleFetchMetadata]);
+
 
   const onSubmit = (data: AddLinkFormValues) => {
     const dataWithImage = { ...data, imageUrl };
@@ -163,7 +172,7 @@ export function AddLinkForm({ onSave, link }: LinkFormProps) {
                     {...field} 
                     onBlur={(e) => {
                       field.onBlur(e);
-                      if (e.target.value && !isEditMode) {
+                      if (e.target.value && !isEditMode && !initialUrl) {
                         handleFetchMetadata();
                       }
                     }}

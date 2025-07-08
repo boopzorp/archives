@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import type { Link } from '@/lib/types';
 import { useAppContext } from '@/context/app-context';
 import { useAuth } from '@/context/auth-context';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { format, isToday, isYesterday, parseISO } from 'date-fns';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -25,18 +25,37 @@ import { getBrandName } from '@/lib/utils';
 function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const isFirebaseReady = !!auth && !!db;
 
   const { searchTerm, links, addLink, updateLink, activeFilter, folders, groupBy, sortBy, loading: dataLoading, error } = useAppContext();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [linkToEdit, setLinkToEdit] = useState<Link | null>(null);
+  const [initialUrl, setInitialUrl] = useState<string | undefined>();
 
   useEffect(() => {
     if (!authLoading && !user) {
       router.replace('/login');
     }
   }, [user, authLoading, router]);
+
+  useEffect(() => {
+    const urlFromQuery = searchParams.get('add');
+    if (urlFromQuery) {
+      try {
+        const decodedUrl = decodeURIComponent(urlFromQuery);
+        new URL(decodedUrl); // validates the URL
+        setInitialUrl(decodedUrl);
+        setIsSheetOpen(true);
+        // Remove query param from URL to avoid re-triggering on reload
+        router.replace('/dashboard', { scroll: false });
+      } catch (e) {
+        console.error("Invalid URL from query param", e);
+        router.replace('/dashboard', { scroll: false });
+      }
+    }
+  }, [searchParams, router]);
 
 
   const handleSaveLink = async (formDataWithImage: AddLinkFormValues & { imageUrl?: string }, linkId?: string) => {
@@ -196,7 +215,10 @@ function DashboardPage() {
           <h1 className="text-2xl font-bold">{getHeaderTitle()}</h1>
         </div>
         <div className="flex items-center gap-2">
-          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+          <Sheet open={isSheetOpen} onOpenChange={(isOpen) => {
+            setIsSheetOpen(isOpen);
+            if (!isOpen) setInitialUrl(undefined); // Clear initial URL when sheet is closed
+          }}>
             <SheetTrigger asChild>
               <Button disabled={!isFirebaseReady}>
                 <Plus className="-ml-1 h-5 w-5" />
@@ -207,7 +229,7 @@ function DashboardPage() {
               <SheetHeader>
                 <SheetTitle className="font-headline text-2xl">Add a new link</SheetTitle>
               </SheetHeader>
-              <AddLinkForm onSave={handleSaveLink} />
+              <AddLinkForm onSave={handleSaveLink} initialUrl={initialUrl} />
             </SheetContent>
           </Sheet>
           <ThemeToggle />
@@ -235,7 +257,7 @@ function DashboardPage() {
                 {`rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{userId} {
+    match /users/{userId}/{**=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }
