@@ -87,7 +87,8 @@ function ExtensionPopupContent() {
   }
   
   const handleAuthAction = (path: string) => {
-     window.parent.postMessage({ type: 'AUTH_ACTION', path }, appOrigin);
+     // Open the authentication page in a new tab using window.open
+     window.open(`${appOrigin}${path}`, '_blank');
   }
 
   const handleSignOut = async () => {
