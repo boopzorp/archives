@@ -45,13 +45,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.close();
                 break;
             case 'OPEN_APP':
-                chrome.runtime.sendMessage({ type: 'OPEN_APP' });
+                chrome.tabs.create({ url: 'https://arch1ves.vercel.app/dashboard' });
                 window.close();
                 break;
             case 'AUTH_ACTION':
                 // Add from=extension to tell the auth pages not to redirect to the dashboard
-                const authPath = `${path}${path.includes('?') ? '&' : '?'}from=extension`;
-                chrome.runtime.sendMessage({ type: 'AUTH_ACTION', path: authPath });
+                const authUrl = `https://arch1ves.vercel.app${path}?from=extension`;
+                chrome.tabs.create({ url: authUrl });
                 window.close();
                 break;
         }

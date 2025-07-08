@@ -6,10 +6,10 @@ import { useAuth } from '@/context/auth-context';
 import { useAppContext } from '@/context/app-context';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, LogOut, ExternalLink, CheckCircle } from 'lucide-react';
+import { Loader2, LogOut, ExternalLink, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getTweetMetadata, getBehanceMetadata, getWsjMetadata, getGenericMetadata } from '@/lib/actions';
-import type { Link, SuggestTagsAndTitleOutput } from '@/lib/types';
+import type { Link } from '@/lib/types';
+import { AddLinkForm, AddLinkFormValues } from '@/components/add-link-form';
 
 function ExtensionPopupContent() {
   const { user, username, loading: authLoading, signOut } = useAuth();
@@ -17,8 +17,8 @@ function ExtensionPopupContent() {
   const { toast } = useToast();
 
   const [currentUrl, setCurrentUrl] = useState<string | null>(null);
+  const [view, setView] = useState<'main' | 'addForm'>('main');
   const [isSaving, setIsSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
   
   const appOrigin = 'https://arch1ves.vercel.app';
 
@@ -54,53 +54,31 @@ function ExtensionPopupContent() {
   }, []); // Empty dependency array means this runs once on mount
 
 
-  const handleSave = async () => {
-    if (!currentUrl) {
-      toast({
-        variant: "destructive",
-        title: "No URL found",
-        description: "Could not get the URL of the current page.",
-      });
-      return;
-    }
-
+  const handleSaveLink = async (formDataWithImage: AddLinkFormValues & { imageUrl?: string }) => {
     setIsSaving(true);
-    setSaveSuccess(false);
-
     try {
-      const isTweet = /https?:\/\/(www\.)?(twitter|x)\.com/.test(currentUrl);
-      const isBehance = /https?:\/\/(www\.)?behance\.net/.test(currentUrl);
-      const isWsj = /https?:\/\/(www\.)?wsj\.com/.test(currentUrl);
-
-      let result: SuggestTagsAndTitleOutput | { error: string };
-
-      if (isTweet) result = await getTweetMetadata(currentUrl);
-      else if (isBehance) result = await getBehanceMetadata(currentUrl);
-      else if (isWsj) result = await getWsjMetadata(currentUrl);
-      else result = await getGenericMetadata(currentUrl);
+      const { imageUrl, ...formData } = formDataWithImage;
+      const tagsArray = formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [];
       
-      let linkData: Partial<Omit<Link, 'id' | 'createdAt' | 'isFavorite' | 'folderId'>> = {
-          url: currentUrl,
-          title: "Untitled", // Default title
-          tags: [],
-      };
-
-      if ('error' in result) {
-        console.warn(`Metadata fetch failed: ${result.error}. Saving with URL only.`);
-        linkData.title = currentUrl;
-      } else {
-        linkData.title = result.title || currentUrl;
-        linkData.description = result.description;
-        linkData.imageUrl = result.imageUrl;
-        linkData.tags = result.tags;
-      }
-
+      const linkData: Partial<Link> = { ...formData, tags: tagsArray, imageUrl };
+      
+      // Firestore does not support `undefined`.
+      Object.keys(linkData).forEach(key => {
+        if ((linkData as any)[key] === undefined) {
+          delete (linkData as any)[key];
+        }
+      });
+      
       await addLink(linkData as Omit<Link, 'id' | 'createdAt' | 'isFavorite' | 'folderId'>);
       
-      setSaveSuccess(true);
+      toast({
+        title: "Link Saved!",
+        description: "Your link has been added to archives.",
+      });
+
       setTimeout(() => {
         window.parent.postMessage({ type: 'CLOSE_POPUP' }, appOrigin);
-      }, 1500);
+      }, 1000);
 
     } catch (error) {
       console.error("Failed to save link:", error);
@@ -123,7 +101,7 @@ function ExtensionPopupContent() {
 
   const handleSignOut = async () => {
     await signOut();
-    // No need to redirect. The component will re-render with the logged-out view.
+    setView('main');
   };
 
   if (authLoading) {
@@ -134,20 +112,24 @@ function ExtensionPopupContent() {
     );
   }
   
-  const saveButtonContent = () => {
-    if (saveSuccess) {
-      return <>Saved <CheckCircle className="ml-2 h-4 w-4" /></>;
+  if (user) {
+    // Logged-in view
+    if (view === 'addForm') {
+      return (
+        <div className="p-4 w-full h-full overflow-y-auto">
+          <div className="flex items-center gap-2 mb-4">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setView('main')}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h2 className="text-lg font-semibold">Save Link</h2>
+          </div>
+          <AddLinkForm onSave={handleSaveLink} initialUrl={currentUrl!} />
+        </div>
+      )
     }
-    if (isSaving) {
-      return <>Saving... <Loader2 className="ml-2 h-4 w-4 animate-spin" /></>;
-    }
-    return "Save Current Page";
-  };
 
-  return (
-    <div className="p-4 text-foreground w-full h-full flex flex-col items-center justify-center">
-      {user ? (
-        // Logged-in view
+    return (
+      <div className="p-4 text-foreground w-full h-full flex flex-col items-center justify-center">
         <div className="space-y-4 w-full">
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10">
@@ -162,28 +144,32 @@ function ExtensionPopupContent() {
                <LogOut className="h-4 w-4" />
              </Button>
           </div>
-          <Button onClick={handleSave} className="w-full" disabled={isSaving || saveSuccess || !currentUrl}>
-            {saveButtonContent()}
+          <Button onClick={() => setView('addForm')} className="w-full" disabled={!currentUrl}>
+            Save Current Page
           </Button>
            <Button variant="outline" onClick={handleOpenApp} className="w-full">
             Open archives <ExternalLink className="ml-2 h-4 w-4" />
            </Button>
         </div>
-      ) : (
-        // Logged-out view
-        <div className="text-center space-y-3">
-           <h1 className="text-xl font-bold text-primary tracking-tighter">archives</h1>
-           <p className="text-sm text-muted-foreground">Log in to save links from any page.</p>
-           <div className="space-y-2 pt-2">
-             <Button onClick={() => handleAuthAction('/login')} className="w-full">
-                Log In
-             </Button>
-             <Button variant="secondary" onClick={() => handleAuthAction('/signup')} className="w-full">
-                Sign Up
-             </Button>
-           </div>
-        </div>
-      )}
+      </div>
+    );
+  }
+
+  // Logged-out view
+  return (
+    <div className="w-full h-full flex items-center justify-center">
+      <div className="text-center space-y-3 p-4">
+          <h1 className="text-xl font-bold text-primary tracking-tighter">archives</h1>
+          <p className="text-sm text-muted-foreground">Log in to save links from any page.</p>
+          <div className="space-y-2 pt-2">
+            <Button onClick={() => handleAuthAction('/login')} className="w-full">
+              Log In
+            </Button>
+            <Button variant="secondary" onClick={() => handleAuthAction('/signup')} className="w-full">
+              Sign Up
+            </Button>
+          </div>
+      </div>
     </div>
   );
 }
