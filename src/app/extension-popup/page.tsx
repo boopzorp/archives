@@ -25,7 +25,7 @@ function ExtensionPopupContent() {
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       // IMPORTANT: Always verify the origin
-      if (event.origin !== appOrigin) { // Check origin first
+      if (event.origin !== appOrigin) {
         return;
       }
 
@@ -35,14 +35,15 @@ function ExtensionPopupContent() {
         case 'POPUP_SCRIPT_READY':
           // Popup script is ready, send our readiness message
           window.parent.postMessage({ type: 'POPUP_READY' }, appOrigin);
-
-      if (type === 'CURRENT_TAB_INFO') {
- 
-        setCurrentUrl(url);
+          break;
+        case 'CURRENT_TAB_INFO':
+          if (url) {
+            setCurrentUrl(url);
+          }
+          break;
       }
     };
     
-        break; // Add break statement for case 'POPUP_SCRIPT_READY'
     window.addEventListener('message', handleMessage);
 
     // Cleanup listener on component unmount
@@ -95,8 +96,7 @@ function ExtensionPopupContent() {
   }
   
   const handleAuthAction = (path: string) => {
-     // Open the authentication page in a new tab using window.open
-     window.open(`${appOrigin}${path}`, '_blank');
+     window.parent.postMessage({ type: 'AUTH_ACTION', path }, appOrigin);
   }
 
   const handleSignOut = async () => {
