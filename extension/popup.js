@@ -1,11 +1,28 @@
 document.addEventListener('DOMContentLoaded', function() {
   const iframe = document.getElementById('app-frame');
+  const loader = document.getElementById('loader');
+  const errorDisplay = document.getElementById('error');
   
   // NOTE: For production, change this to your app's domain.
   const appUrl = 'http://localhost:9002'; 
   
-  // Set the iframe source to our new dedicated extension page
   iframe.src = `${appUrl}/extension-popup`;
+
+  iframe.addEventListener('load', () => {
+    loader.style.display = 'none';
+    errorDisplay.style.display = 'none';
+    iframe.style.display = 'block';
+  });
+
+  // A simple way to detect connection errors is to see if the iframe loads.
+  // We'll set a timeout. If the 'load' event doesn't fire, we assume a connection error.
+  const timeout = setTimeout(() => {
+    // If the iframe is still not visible, it's very likely a connection error.
+    if (iframe.style.display === 'none') {
+        loader.style.display = 'none';
+        errorDisplay.style.display = 'block';
+    }
+  }, 3000); // 3-second timeout
 
   // Listen for messages from the iframe
   window.addEventListener('message', (event) => {
