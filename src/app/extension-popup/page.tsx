@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useAppContext } from '@/context/app-context';
 import { Button } from '@/components/ui/button';
@@ -10,12 +10,13 @@ import { Loader2, LogOut, ExternalLink, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getTweetMetadata, getBehanceMetadata, getWsjMetadata, getGenericMetadata } from '@/lib/actions';
 import type { Link, SuggestTagsAndTitleOutput } from '@/lib/types';
+import { useSearchParams } from 'next/navigation';
 
-
-export default function ExtensionPopupPage() {
+function ExtensionPopupContent() {
   const { user, username, loading: authLoading, signOut } = useAuth();
   const { addLink } = useAppContext();
   const { toast } = useToast();
+  const searchParams = useSearchParams();
 
   const [currentUrl, setCurrentUrl] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -24,22 +25,11 @@ export default function ExtensionPopupPage() {
   const appOrigin = 'https://arch1ves.vercel.app';
 
   useEffect(() => {
-    // 1. Tell the parent extension window that the UI is ready.
-    window.parent.postMessage({ type: 'POPUP_UI_READY' }, appOrigin);
-
-    // 2. Set up a listener to receive the tab info from the parent.
-    const handleMessage = (event: MessageEvent) => {
-      // IMPORTANT: Always verify the origin for security
-      if (event.origin !== appOrigin) return;
-
-      if (event.data.type === 'CURRENT_TAB_INFO') {
-        setCurrentUrl(event.data.url);
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, []); // Empty dependency array ensures this runs only once when the component mounts.
+    const urlFromQuery = searchParams.get('url');
+    if (urlFromQuery) {
+      setCurrentUrl(urlFromQuery);
+    }
+  }, [searchParams]);
 
 
   const handleSave = async () => {
@@ -174,4 +164,17 @@ export default function ExtensionPopupPage() {
       )}
     </div>
   );
+}
+
+
+export default function ExtensionPopupPage() {
+  return (
+    <Suspense fallback={
+        <div className="flex items-center justify-center h-full w-full">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+    }>
+      <ExtensionPopupContent />
+    </Suspense>
+  )
 }

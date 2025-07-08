@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { sendPasswordResetEmail } from 'firebase/auth';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 import { auth } from '@/lib/firebase';
@@ -27,16 +27,18 @@ type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const isFirebaseReady = !!auth;
   const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    if (!authLoading && user) {
+    const fromExtension = searchParams.get('from') === 'extension';
+    if (!authLoading && user && !fromExtension) {
       router.replace('/dashboard');
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, searchParams]);
 
   const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -54,7 +56,11 @@ export default function ForgotPasswordPage() {
         title: "Password Reset Email Sent",
         description: "Please check your inbox to reset your password.",
       });
-      router.push('/login');
+       if (searchParams.get('from') === 'extension') {
+          router.push('/login?from=extension');
+      } else {
+          router.push('/login');
+      }
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -66,7 +72,7 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  if (authLoading || user) {
+  if (authLoading || (user && searchParams.get('from') !== 'extension')) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />

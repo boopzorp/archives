@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 import { auth, db } from '@/lib/firebase';
@@ -30,16 +30,18 @@ type SignupFormValues = z.infer<typeof signupSchema>;
 
 export default function SignupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const isFirebaseReady = !!auth && !!db;
   const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    if (!authLoading && user) {
+    const fromExtension = searchParams.get('from') === 'extension';
+    if (!authLoading && user && !fromExtension) {
       router.replace('/dashboard');
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, searchParams]);
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -69,6 +71,10 @@ export default function SignupPage() {
         folders: [],
         tags: [],
       });
+      
+      if (searchParams.get('from') === 'extension') {
+          window.close();
+      }
 
     } catch (error: any) {
       toast({
@@ -83,7 +89,7 @@ export default function SignupPage() {
     }
   };
 
-  if (authLoading || user) {
+  if (authLoading || (user && searchParams.get('from') !== 'extension')) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
