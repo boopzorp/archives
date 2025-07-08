@@ -52,10 +52,8 @@ function ExtensionPopupContent() {
         description: "Your link has been added to archives.",
       });
 
-      // After saving, send a message to the parent to close the popup.
-      setTimeout(() => {
-        window.parent.postMessage({ type: 'CLOSE_POPUP' }, appOrigin);
-      }, 1000);
+      // After saving, revert to the main view.
+      setView('main');
 
     } catch (error) {
       console.error("Failed to save link:", error);
@@ -123,7 +121,7 @@ function ExtensionPopupContent() {
              </Button>
           </div>
           <Button onClick={() => setView('addForm')} className="w-full" disabled={!currentUrl}>
-            { currentUrl ? 'Save Current Page' : 'Not on a valid page' }
+            { currentUrl ? 'Save Current Page' : 'Getting page URL...' }
           </Button>
            <Button variant="outline" onClick={handleOpenApp} className="w-full">
             Open archives <ExternalLink className="ml-2 h-4 w-4" />
