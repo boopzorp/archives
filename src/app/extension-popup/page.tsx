@@ -1,25 +1,107 @@
 
 "use client";
 
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
+import { useAppContext } from '@/context/app-context';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, LogOut, ExternalLink } from 'lucide-react';
+import { Loader2, LogOut, ExternalLink, CheckCircle } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { getTweetMetadata, getBehanceMetadata, getWsjMetadata, getGenericMetadata } from '@/lib/actions';
+import type { Link, SuggestTagsAndTitleOutput } from '@/lib/types';
+
 
 export default function ExtensionPopupPage() {
   const { user, username, loading: authLoading, signOut } = useAuth();
+  const { addLink } = useAppContext();
+  const { toast } = useToast();
 
-  const handleSave = () => {
-    // Send a message to the parent window (the extension's popup.js)
-    window.parent.postMessage({ type: 'SAVE_PAGE' }, '*'); 
+  const [currentUrl, setCurrentUrl] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  
+  const appOrigin = 'https://arch1ves.vercel.app';
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== appOrigin) return;
+
+      if (event.data.type === 'CURRENT_TAB_INFO') {
+        setCurrentUrl(event.data.url);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+
+  const handleSave = async () => {
+    if (!currentUrl) {
+      toast({
+        variant: "destructive",
+        title: "No URL found",
+        description: "Could not get the URL of the current page.",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveSuccess(false);
+
+    try {
+      const isTweet = /https?:\/\/(www\.)?(twitter|x)\.com/.test(currentUrl);
+      const isBehance = /https?:\/\/(www\.)?behance\.net/.test(currentUrl);
+      const isWsj = /https?:\/\/(www\.)?wsj\.com/.test(currentUrl);
+
+      let result: SuggestTagsAndTitleOutput | { error: string };
+
+      if (isTweet) result = await getTweetMetadata(currentUrl);
+      else if (isBehance) result = await getBehanceMetadata(currentUrl);
+      else if (isWsj) result = await getWsjMetadata(currentUrl);
+      else result = await getGenericMetadata(currentUrl);
+      
+      let linkData: Partial<Omit<Link, 'id' | 'createdAt' | 'isFavorite' | 'folderId'>> = {
+          url: currentUrl,
+          title: "Untitled", // Default title
+          tags: [],
+      };
+
+      if ('error' in result) {
+        console.warn(`Metadata fetch failed: ${result.error}. Saving with URL only.`);
+        linkData.title = currentUrl;
+      } else {
+        linkData.title = result.title || currentUrl;
+        linkData.description = result.description;
+        linkData.imageUrl = result.imageUrl;
+        linkData.tags = result.tags;
+      }
+
+      await addLink(linkData as Omit<Link, 'id' | 'createdAt' | 'isFavorite' | 'folderId'>);
+      
+      setSaveSuccess(true);
+      setTimeout(() => {
+        window.parent.postMessage({ type: 'CLOSE_POPUP' }, appOrigin);
+      }, 1500);
+
+    } catch (error) {
+      console.error("Failed to save link:", error);
+      toast({
+        variant: "destructive",
+        title: "Oh no! Something went wrong.",
+        description: "Could not save the link. Please try again.",
+      });
+      setIsSaving(false);
+    }
   };
   
   const handleOpenApp = () => {
-     window.parent.postMessage({ type: 'OPEN_APP' }, '*');
+     window.parent.postMessage({ type: 'OPEN_APP' }, appOrigin);
   }
   
   const handleAuthAction = (path: string) => {
-     window.parent.postMessage({ type: 'AUTH_ACTION', path }, '*');
+     window.parent.postMessage({ type: 'AUTH_ACTION', path }, appOrigin);
   }
 
   const handleSignOut = async () => {
@@ -33,6 +115,17 @@ export default function ExtensionPopupPage() {
       </div>
     );
   }
+  
+  const saveButtonContent = () => {
+    if (saveSuccess) {
+      return <>Saved <CheckCircle className="ml-2 h-4 w-4" /></>;
+    }
+    if (isSaving) {
+      return <>Saving... <Loader2 className="ml-2 h-4 w-4 animate-spin" /></>;
+    }
+    return "Save Current Page";
+  };
+
 
   return (
     <div className="p-4 text-foreground w-full h-full flex flex-col items-center justify-center">
@@ -52,8 +145,8 @@ export default function ExtensionPopupPage() {
                <LogOut className="h-4 w-4" />
              </Button>
           </div>
-          <Button onClick={handleSave} className="w-full">
-            Save Current Page
+          <Button onClick={handleSave} className="w-full" disabled={isSaving || saveSuccess || !currentUrl}>
+            {saveButtonContent()}
           </Button>
            <Button variant="outline" onClick={handleOpenApp} className="w-full">
             Open archives <ExternalLink className="ml-2 h-4 w-4" />

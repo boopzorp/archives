@@ -19,6 +19,15 @@ document.addEventListener('DOMContentLoaded', () => {
         clearTimeout(connectionTimeout);
         if (statusContainer) statusContainer.style.display = 'none';
         iframe.style.display = 'block';
+        
+        // Get the current tab and send its URL to the iframe
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            const currentTab = tabs[0];
+            // Only send http/https URLs
+            if (currentTab && currentTab.url && currentTab.url.startsWith('http')) {
+                iframe.contentWindow.postMessage({ type: 'CURRENT_TAB_INFO', url: currentTab.url }, new URL(appUrl).origin);
+            }
+        });
     };
     
     // Listen for messages from the iframe
@@ -28,9 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (event.data.type === 'SAVE_PAGE') {
-            chrome.runtime.sendMessage({ type: 'SAVE_PAGE' });
-            window.close(); // Close the popup
+        if (event.data.type === 'CLOSE_POPUP') {
+            window.close();
         } else if (event.data.type === 'OPEN_APP') {
             chrome.runtime.sendMessage({ type: 'OPEN_APP' });
             window.close();
