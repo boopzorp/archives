@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useAppContext } from '@/context/app-context';
 import { Button } from '@/components/ui/button';
@@ -10,13 +10,11 @@ import { Loader2, LogOut, ExternalLink, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getTweetMetadata, getBehanceMetadata, getWsjMetadata, getGenericMetadata } from '@/lib/actions';
 import type { Link, SuggestTagsAndTitleOutput } from '@/lib/types';
-import { useSearchParams } from 'next/navigation';
 
 function ExtensionPopupContent() {
   const { user, username, loading: authLoading, signOut } = useAuth();
   const { addLink } = useAppContext();
   const { toast } = useToast();
-  const searchParams = useSearchParams();
 
   const [currentUrl, setCurrentUrl] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -25,19 +23,36 @@ function ExtensionPopupContent() {
   const appOrigin = 'https://arch1ves.vercel.app';
 
   useEffect(() => {
-    // The URL is now passed as a query parameter, so we get it from there.
-    const urlFromQuery = searchParams.get('url');
-    if (urlFromQuery) {
+    // Signal to the parent window that the UI is ready to receive data
+    window.parent.postMessage({ type: 'POPUP_UI_READY' }, appOrigin);
+
+    const handleMessage = (event: MessageEvent) => {
+      // IMPORTANT: Always verify the origin
+      if (event.origin !== appOrigin) {
+        return;
+      }
+
+      const { type, url } = event.data;
+
+      if (type === 'CURRENT_TAB_INFO' && url) {
         try {
-            const decodedUrl = decodeURIComponent(urlFromQuery);
-            // Quick validation
-            new URL(decodedUrl);
-            setCurrentUrl(decodedUrl);
+          // Quick validation
+          new URL(url);
+          setCurrentUrl(url);
         } catch (e) {
-            console.error("Invalid URL passed to extension popup:", e);
+          console.error("Invalid URL passed to extension popup:", e);
         }
-    }
-  }, [searchParams]);
+      }
+    };
+    
+    window.addEventListener('message', handleMessage);
+
+    // Cleanup listener on component unmount
+    return () => {
+      window.removeEventListener('message', handleMessage);
+    };
+  }, []); // Empty dependency array means this runs once on mount
+
 
   const handleSave = async () => {
     if (!currentUrl) {
@@ -173,20 +188,6 @@ function ExtensionPopupContent() {
   );
 }
 
-import { Suspense } from 'react';
-
-function Loader() {
-  return (
-    <div className="flex items-center justify-center h-full w-full">
-      <Loader2 className="h-6 w-6 animate-spin text-primary" />
-    </div>
-  )
-}
-
 export default function ExtensionPopupPage() {
-  return (
-    <Suspense fallback={<Loader />}>
-      <ExtensionPopupContent />
-    </Suspense>
-  )
+    return <ExtensionPopupContent />;
 }

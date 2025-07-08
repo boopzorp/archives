@@ -6,7 +6,6 @@ import { onAuthStateChanged, User, signOut as firebaseSignOut, updateProfile, Un
 import { auth, db, storage } from '@/lib/firebase';
 import { doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: User | null;
@@ -91,7 +90,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
     if (!auth) {
@@ -147,12 +145,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const signOut = async () => {
-    if (!auth) {
-      router.push('/login');
-      return;
+    if (auth) {
+      await firebaseSignOut(auth);
     }
-    await firebaseSignOut(auth);
-    router.push('/login');
   };
 
   const value = { user, username, loading, signOut, updateUserProfile };

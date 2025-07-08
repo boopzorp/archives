@@ -7,16 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const appUrl = 'https://arch1ves.vercel.app/extension-popup';
     const appOrigin = new URL(appUrl).origin;
 
-    // Get the current tab's URL and pass it to the iframe as a query parameter
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        const currentTab = tabs[0];
-        let urlToLoad = appUrl;
-        if (currentTab && currentTab.url && currentTab.url.startsWith('http')) {
-            // Add the URL as a query parameter
-            urlToLoad += `?url=${encodeURIComponent(currentTab.url)}`;
-        }
-        iframe.src = urlToLoad;
-    });
+    iframe.src = appUrl;
 
     const connectionTimeout = setTimeout(() => {
         if (iframe.style.display === 'none') {
@@ -35,13 +26,21 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('message', (event) => {
         // IMPORTANT: Always verify the origin of the message
         if (event.origin !== appOrigin) {
-            console.warn('Message from unexpected origin ignored:', event.origin);
             return;
         }
 
         const { type, path } = event.data;
 
         switch (type) {
+            case 'POPUP_UI_READY':
+                // The iframe is ready, now get the tab info and send it
+                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                    const currentTab = tabs[0];
+                    if (currentTab && currentTab.url && currentTab.url.startsWith('http')) {
+                        iframe.contentWindow.postMessage({ type: 'CURRENT_TAB_INFO', url: currentTab.url }, appOrigin);
+                    }
+                });
+                break;
             case 'CLOSE_POPUP':
                 window.close();
                 break;
