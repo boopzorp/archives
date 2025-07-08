@@ -25,15 +25,16 @@ function ExtensionPopupContent() {
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       // IMPORTANT: Always verify the origin
-      if (event.origin !== appOrigin) {
- else if (type === 'POPUP_SCRIPT_READY') {
- // Popup script is ready, send our readiness message
-        window.parent.postMessage({ type: 'POPUP_READY' }, appOrigin);
-      }
+      if (event.origin !== appOrigin) { // Check origin first
         return;
       }
 
       const { type, url } = event.data;
+
+      switch (type) {
+        case 'POPUP_SCRIPT_READY':
+          // Popup script is ready, send our readiness message
+          window.parent.postMessage({ type: 'POPUP_READY' }, appOrigin);
 
       if (type === 'CURRENT_TAB_INFO') {
  
@@ -41,6 +42,7 @@ function ExtensionPopupContent() {
       }
     };
     
+        break; // Add break statement for case 'POPUP_SCRIPT_READY'
     window.addEventListener('message', handleMessage);
 
     // Cleanup listener on component unmount
