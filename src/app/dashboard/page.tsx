@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { Plus, WifiOff, Search as SearchIcon, Star, MessageSquare, AlertCircle } from 'lucide-react';
 import { AppLayout } from '@/components/app-layout';
 import LinkCard from '@/components/link-card';
@@ -21,8 +21,9 @@ import { useToast } from '@/hooks/use-toast';
 import { auth, db } from '@/lib/firebase';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { getBrandName } from '@/lib/utils';
+import Loading from './loading';
 
-function DashboardPage() {
+function DashboardPageContent() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -350,5 +351,11 @@ service cloud.firestore {
   );
 }
 
-// This is the main export for the page, which is now just the DashboardPage
-export default DashboardPage;
+export default function DashboardPage() {
+  return (
+    // Wrap the component that uses searchParams in a Suspense boundary
+    <Suspense fallback={<Loading />}>
+      <DashboardPageContent />
+    </Suspense>
+  );
+}
