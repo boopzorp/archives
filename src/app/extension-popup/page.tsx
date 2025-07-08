@@ -26,12 +26,17 @@ function ExtensionPopupContent() {
     const handleMessage = (event: MessageEvent) => {
       // IMPORTANT: Always verify the origin
       if (event.origin !== appOrigin) {
+ else if (type === 'POPUP_SCRIPT_READY') {
+ // Popup script is ready, send our readiness message
+        window.parent.postMessage({ type: 'POPUP_READY' }, appOrigin);
+      }
         return;
       }
 
       const { type, url } = event.data;
 
       if (type === 'CURRENT_TAB_INFO') {
+ 
         setCurrentUrl(url);
       }
     };
@@ -42,9 +47,6 @@ function ExtensionPopupContent() {
     return () => {
       window.removeEventListener('message', handleMessage);
     };
-
-    // Send a message to the parent window indicating the iframe is ready
-    window.parent.postMessage({ type: 'POPUP_READY' }, appOrigin);
 
   }, []); // Empty dependency array means this runs once on mount
 
