@@ -7,22 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const appUrl = 'https://arch1ves.vercel.app/extension-popup';
     const appOrigin = new URL(appUrl).origin;
 
-    iframe.src = appUrl;
-
-    const connectionTimeout = setTimeout(() => {
-        if (iframe.style.display === 'none') {
-            if (loadingDiv) loadingDiv.style.display = 'none';
-            if (errorDiv) errorDiv.style.display = 'block';
-        }
-    }, 5000);
-
-    iframe.onload = () => {
-        clearTimeout(connectionTimeout);
-        if (statusContainer) statusContainer.style.display = 'none';
-        iframe.style.display = 'block';
-    };
-    
-    // Listen for messages from the iframe
+    // Set up message listener to catch all messages from the iframe
     window.addEventListener('message', (event) => {
         // IMPORTANT: Always verify the origin of the message
         if (event.origin !== appOrigin) {
@@ -32,32 +17,45 @@ document.addEventListener('DOMContentLoaded', () => {
         const { type, path } = event.data;
 
         switch (type) {
-            case 'POPUP_UI_READY':
-                // The iframe is ready, now get the tab info and send it
-                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                    const currentTab = tabs[0];
-                    if (currentTab && currentTab.url && currentTab.url.startsWith('http')) {
-                        iframe.contentWindow.postMessage({ type: 'CURRENT_TAB_INFO', url: currentTab.url }, appOrigin);
-                    } else {
-                        // If there's no valid URL, still send something so the UI can react
-                        iframe.contentWindow.postMessage({ type: 'CURRENT_TAB_INFO', url: null }, appOrigin);
-                    }
-                });
-                break;
             case 'CLOSE_POPUP':
                 window.close();
                 break;
             case 'OPEN_APP':
-                chrome.runtime.sendMessage({ type: 'OPEN_APP' });
+                chrome.tabs.create({ url: `${appOrigin}/dashboard` });
                 window.close();
                 break;
             case 'AUTH_ACTION':
-                // Open auth pages directly from the popup script.
-                // This is more reliable than messaging the background script.
                 const authUrl = `${appOrigin}${path}?from=extension`;
                 chrome.tabs.create({ url: authUrl });
                 window.close();
                 break;
         }
     });
+
+    iframe.src = appUrl;
+
+    const connectionTimeout = setTimeout(() => {
+        if (iframe.style.display === 'none') {
+            if (loadingDiv) loadingDiv.style.display = 'none';
+            if (errorDiv) errorDiv.style.display = 'block';
+        }
+    }, 5000);
+
+    // When the iframe has finished loading, we initiate the data transfer
+    iframe.onload = () => {
+        clearTimeout(connectionTimeout);
+        if (statusContainer) statusContainer.style.display = 'none';
+        iframe.style.display = 'block';
+
+        // Now that the iframe is ready, get the tab info and send it
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            const currentTab = tabs[0];
+            if (currentTab && currentTab.url && currentTab.url.startsWith('http')) {
+                iframe.contentWindow.postMessage({ type: 'CURRENT_TAB_INFO', url: currentTab.url }, appOrigin);
+            } else {
+                // If there's no valid URL, send null so the UI can disable the save button
+                iframe.contentWindow.postMessage({ type: 'CURRENT_TAB_INFO', url: null }, appOrigin);
+            }
+        });
+    };
 });

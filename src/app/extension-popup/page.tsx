@@ -23,9 +23,6 @@ function ExtensionPopupContent() {
   const appOrigin = 'https://arch1ves.vercel.app';
 
   useEffect(() => {
-    // 1. Signal to the parent window that the UI is ready to receive data
-    window.parent.postMessage({ type: 'POPUP_UI_READY' }, appOrigin);
-
     const handleMessage = (event: MessageEvent) => {
       // IMPORTANT: Always verify the origin
       if (event.origin !== appOrigin) {
@@ -35,14 +32,7 @@ function ExtensionPopupContent() {
       const { type, url } = event.data;
 
       if (type === 'CURRENT_TAB_INFO') {
-        try {
-          // Quick validation for non-null URLs
-          if (url) new URL(url);
-          setCurrentUrl(url);
-        } catch (e) {
-          console.error("Invalid URL passed to extension popup:", e);
-          setCurrentUrl(null);
-        }
+        setCurrentUrl(url);
       }
     };
     
